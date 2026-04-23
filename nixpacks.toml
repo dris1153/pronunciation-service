@@ -1,0 +1,17 @@
+[phases.setup]
+aptPkgs = ["ffmpeg", "libsndfile1"]
+
+[phases.install]
+onlyIncludeFiles = ["requirements.txt"]
+cmds = [
+  "pip install --no-cache-dir torch==2.5.1+cpu torchaudio==2.5.1+cpu --index-url https://download.pytorch.org/whl/cpu",
+  "pip install --no-cache-dir -r requirements.txt",
+]
+
+[phases.build]
+cmds = [
+  '''python -c "import os; model = os.environ.get('ASR_MODEL_NAME', 'facebook/wav2vec2-base-960h'); from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor; Wav2Vec2Processor.from_pretrained(model, cache_dir='model_cache'); Wav2Vec2ForCTC.from_pretrained(model, cache_dir='model_cache'); print(f'Model {model} baked into image successfully')"''',
+]
+
+[start]
+cmd = "python main.py"

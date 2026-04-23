@@ -44,8 +44,8 @@ print(f'Model {model} baked into image successfully')"
 # Railway injects PORT at runtime; default to 8000 for local Docker runs.
 # pydantic-settings reads the PORT env var directly into Settings.port —
 # no shell expansion needed, avoids the "$PORT is not a valid integer" error.
-ENV PORT=8000
+ENV PORT=8001
 
-EXPOSE 8000
+EXPOSE 8001
 
 CMD ["python", "main.py"]
