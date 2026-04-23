@@ -1,0 +1,49 @@
+# Git
+
+.git
+.gitignore
+
+# Python
+
+**pycache**/
+_.py[cod]
+_.pyo
+_.pyd
+.Python
+_.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+
+.venv/
+venv/
+env/
+.conda/
+
+# Local model cache — NOT needed in build context.
+
+# The Dockerfile downloads the model at build time via RUN.
+
+model_cache/
+
+# Test artifacts
+
+.pytest_cache/
+htmlcov/
+.coverage
+\*.log
+
+# IDE / OS
+
+.vscode/
+.idea/
+\*.DS_Store
+Thumbs.db
+
+# Env files — Railway injects env vars directly; never ship secrets in the image
+
+.env
+.env.\*
+!.env.example

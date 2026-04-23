@@ -1,0 +1,33 @@
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+
+# ML / Deep Learning
+# torch and torchaudio are installed separately in Dockerfile (CPU-only build).
+# Keep these lines so local `pip install -r requirements.txt` still works.
+torch==2.5.1
+torchaudio==2.5.1
+transformers==4.47.1
+
+# Audio processing
+librosa==0.10.2.post1
+soundfile==0.13.1
+imageio-ffmpeg>=0.5.1
+
+# IPA / Phoneme
+g2p-en==2.1.0
+
+# Data validation
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# Utilities
+numpy==1.26.4
+python-dotenv==1.0.1
+loguru==0.7.3
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1
