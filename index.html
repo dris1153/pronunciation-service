@@ -15,6 +15,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<!-- Anti-FOUC: set html lang BEFORE body paints. The async i18n script
+     after <body> swaps text content; this just sets the attribute early
+     so styled :lang() rules and screen readers see the right language. -->
+<script>
+  (function () {
+    var saved = null;
+    try { saved = localStorage.getItem('docs-lang'); } catch (e) {}
+    var nav = ((navigator.language || 'en') + '').slice(0, 2).toLowerCase();
+    var lang = saved || nav;
+    if (['en','vi','zh'].indexOf(lang) < 0) lang = 'en';
+    document.documentElement.lang = lang;
+    document.documentElement.dataset.lang = lang;
+  })();
+</script>
 <style>
   /* ── Warm Paper palette + IBM Plex / Fraunces typography ────────────── */
   :root {
@@ -33,8 +47,13 @@
     --warning:    #A16207;   /* muted amber */
     --error:      #B91C1C;   /* muted red */
 
-    --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
-    --font-body:    'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    --font-display: 'Fraunces', Georgia, 'Times New Roman',
+                    'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+    --font-body:    'IBM Plex Sans',
+                    'Noto Sans SC',         /* loaded only when lang=zh */
+                    'PingFang SC',          /* macOS Chinese fallback */
+                    'Microsoft YaHei',      /* Windows Chinese fallback */
+                    system-ui, -apple-system, sans-serif;
     --font-mono:    'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
 
     --radius:    6px;
@@ -134,6 +153,30 @@
     transition: border-color .2s, background .2s;
   }
   header.site .menu-btn:hover { background: var(--surface); border-color: var(--border-2); }
+
+  /* ── Language switcher (i18n) ────────────────────────────────────────── */
+  .lang-switcher {
+    display: inline-flex; gap: 2px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--bg); padding: 2px;
+    margin-right: 12px;
+  }
+  .lang-switcher button {
+    background: transparent; border: 0;
+    padding: 4px 10px; cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px; font-weight: 500;
+    color: var(--ink-2);
+    border-radius: 4px;
+    transition: background .15s, color .15s;
+    line-height: 1.5;
+    letter-spacing: 0.04em;
+  }
+  .lang-switcher button:hover { color: var(--ink); background: var(--surface); }
+  .lang-switcher button.active {
+    background: var(--accent); color: var(--bg);
+  }
+  .lang-switcher button.active:hover { background: var(--accent-2); }
 
   /* ── Layout ─────────────────────────────────────────────────────────── */
   .shell {
@@ -595,22 +638,27 @@
     <span class="badge">v1.0</span>
   </a>
   <span class="spacer"></span>
-  <button class="menu-btn" id="menuBtn" aria-label="Open navigation">Menu</button>
+  <div class="lang-switcher" role="group" aria-label="Language">
+    <button data-lang-btn="en" type="button" lang="en">EN</button>
+    <button data-lang-btn="vi" type="button" lang="vi">VI</button>
+    <button data-lang-btn="zh" type="button" lang="zh">ZH</button>
+  </div>
+  <button class="menu-btn" id="menuBtn" aria-label="Open navigation" data-i18n="ui_menu">Menu</button>
 </header>
 
 <div class="shell">
   <aside class="sidebar" id="sidebar" aria-label="Documentation navigation">
     <nav>
       <div class="nav-group">
-        <p class="nav-group-title">Get Started</p>
-        <a href="#overview">Overview</a>
-        <a href="#quick-start">Quick Start</a>
-        <a href="#pipeline">Architecture &amp; Pipeline</a>
-        <a href="#scoring">How Scoring Works</a>
+        <p class="nav-group-title" data-i18n="nav_grp_getstarted">Get Started</p>
+        <a href="#overview" data-i18n="nav_overview">Overview</a>
+        <a href="#quick-start" data-i18n="nav_quickstart">Quick Start</a>
+        <a href="#pipeline" data-i18n="nav_pipeline">Architecture &amp; Pipeline</a>
+        <a href="#scoring" data-i18n="nav_scoring">How Scoring Works</a>
       </div>
       <div class="nav-group">
-        <p class="nav-group-title">API</p>
-        <a href="#api-reference">API Reference</a>
+        <p class="nav-group-title" data-i18n="nav_grp_api">API</p>
+        <a href="#api-reference" data-i18n="nav_apiref">API Reference</a>
         <a class="sub" href="#ep-evaluate">POST /evaluate</a>
         <a class="sub" href="#ep-transcribe">POST /transcribe</a>
         <a class="sub" href="#ep-text-analysis">GET /text-analysis</a>
@@ -618,10 +666,10 @@
         <a class="sub" href="#ep-health">GET /health</a>
       </div>
       <div class="nav-group">
-        <p class="nav-group-title">Integration</p>
-        <a href="#auth">Authentication &amp; Internal Mode</a>
-        <a href="#errors">Error Handling &amp; Retry</a>
-        <a href="#deploy">Deployment</a>
+        <p class="nav-group-title" data-i18n="nav_grp_integration">Integration</p>
+        <a href="#auth" data-i18n="nav_auth">Authentication &amp; Internal Mode</a>
+        <a href="#errors" data-i18n="nav_errors">Error Handling &amp; Retry</a>
+        <a href="#deploy" data-i18n="nav_deploy">Deployment</a>
       </div>
     </nav>
   </aside>
@@ -632,8 +680,8 @@
 
     <!-- ── 1. OVERVIEW ───────────────────────────────────────── -->
     <section id="overview">
-      <h1>Pronunciation Validation Service</h1>
-      <p class="lead">
+      <h1 data-i18n="s1_h1">Pronunciation Validation Service</h1>
+      <p class="lead" data-i18n="s1_lead">
         REST API that scores English pronunciation by comparing audio recordings
         against reference text. Returns IPA-level phoneme comparison,
         Goodness-of-Pronunciation (GOP), prosody, fluency, and an overall score
@@ -643,60 +691,60 @@
       <div class="feature-grid">
         <div class="feature-card">
           <div class="ico" aria-hidden="true"><svg><use href="#i-phonetics"/></svg></div>
-          <h4>IPA Comparison</h4>
-          <p>Per-phoneme alignment using Levenshtein DP with phonetic-similarity costs.</p>
+          <h4 data-i18n="s1_card_ipa_t">IPA Comparison</h4>
+          <p data-i18n="s1_card_ipa_d">Per-phoneme alignment using Levenshtein DP with phonetic-similarity costs.</p>
         </div>
         <div class="feature-card">
           <div class="ico" aria-hidden="true"><svg><use href="#i-bars"/></svg></div>
-          <h4>GOP Scoring</h4>
-          <p>CTC log-posterior based, with remainder-aware frame distribution.</p>
+          <h4 data-i18n="s1_card_gop_t">GOP Scoring</h4>
+          <p data-i18n="s1_card_gop_d">CTC log-posterior based, with remainder-aware frame distribution.</p>
         </div>
         <div class="feature-card">
           <div class="ico" aria-hidden="true"><svg><use href="#i-wave"/></svg></div>
-          <h4>Prosody Analysis</h4>
-          <p>Pitch via librosa pyin; intonation, range, contour, monotone detection.</p>
+          <h4 data-i18n="s1_card_pro_t">Prosody Analysis</h4>
+          <p data-i18n="s1_card_pro_d">Pitch via librosa pyin; intonation, range, contour, monotone detection.</p>
         </div>
         <div class="feature-card">
           <div class="ico" aria-hidden="true"><svg><use href="#i-speed"/></svg></div>
-          <h4>Fluency Metrics</h4>
-          <p>Speech rate + pause analysis from CTC forced-alignment word timing.</p>
+          <h4 data-i18n="s1_card_flu_t">Fluency Metrics</h4>
+          <p data-i18n="s1_card_flu_d">Speech rate + pause analysis from CTC forced-alignment word timing.</p>
         </div>
       </div>
 
-      <h3>Tech stack</h3>
+      <h3 data-i18n="s1_techstack_h">Tech stack</h3>
       <ul>
-        <li><strong>Web:</strong> FastAPI 0.115 + Uvicorn (single worker)</li>
-        <li><strong>ASR model:</strong> facebook/wav2vec2-base-960h (CPU-only build)</li>
-        <li><strong>IPA:</strong> g2p_en + ARPAbet → IPA mapping</li>
-        <li><strong>Audio:</strong> librosa, soundfile, ffmpeg</li>
-        <li><strong>Auth:</strong> X-API-Key + optional X-Service-Auth (per-user mode)</li>
-        <li><strong>Deploy:</strong> Coolify self-host via Nixpacks (or Docker)</li>
+        <li><strong data-i18n="s1_ts_web">Web:</strong> FastAPI 0.115 + Uvicorn (single worker)</li>
+        <li><strong data-i18n="s1_ts_model">ASR model:</strong> facebook/wav2vec2-base-960h (CPU-only build)</li>
+        <li><strong data-i18n="s1_ts_ipa">IPA:</strong> g2p_en + ARPAbet → IPA mapping</li>
+        <li><strong data-i18n="s1_ts_audio">Audio:</strong> librosa, soundfile, ffmpeg</li>
+        <li><strong data-i18n="s1_ts_auth">Auth:</strong> X-API-Key + optional X-Service-Auth (per-user mode)</li>
+        <li><strong data-i18n="s1_ts_deploy">Deploy:</strong> Coolify self-host via Nixpacks (or Docker)</li>
       </ul>
 
       <div class="callout">
-        <strong>Audience</strong>
-        This page is for developers integrating the service from their own
+        <strong data-i18n="s1_callout_t">Audience</strong>
+        <span data-i18n-html="s1_callout_b">This page is for developers integrating the service from their own
         backend. For end-user UX, scoring rationale, or the full API
         contract, see <code>README.md</code> and <code>docs/scoring-constants.md</code>
-        in the source repo.
+        in the source repo.</span>
       </div>
     </section>
 
     <!-- ── 2. QUICK START ────────────────────────────────────── -->
     <section id="quick-start">
-      <h2>Quick Start</h2>
+      <h2 data-i18n="s2_h2">Quick Start</h2>
 
-      <p>Send an audio file plus the reference text. The service replies with
+      <p data-i18n="s2_lead">Send an audio file plus the reference text. The service replies with
       a complete pronunciation report.</p>
 
-      <h3>Minimal cURL</h3>
+      <h3 data-i18n="s2_curl_h">Minimal cURL</h3>
       <pre><code># Replace API_KEY with your own; sample.wav must be 16-bit mono &lt;= 30s &lt;= 10MB
 curl -X POST http://localhost:8000/api/v1/evaluate \
   -H "X-API-Key: $API_KEY" \
   -F "audio=@sample.wav;type=audio/wav" \
   -F "reference_text=hello world"</code></pre>
 
-      <h3>Sample response (truncated)</h3>
+      <h3 data-i18n="s2_resp_h">Sample response (truncated)</h3>
       <pre><code>{
   "reference_text": "hello world",
   "transcribed_text": "hello world",
@@ -716,7 +764,7 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
   }
 }</code></pre>
 
-      <h3>Constraints (defaults)</h3>
+      <h3 data-i18n="s2_constraints_h">Constraints (defaults)</h3>
       <table>
         <thead><tr><th>Constraint</th><th>Default</th><th>Override</th></tr></thead>
         <tbody>
@@ -729,7 +777,7 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
         </tbody>
       </table>
 
-      <h3>Supported audio formats</h3>
+      <h3 data-i18n="s2_formats_h">Supported audio formats</h3>
       <p><code>audio/wav</code>, <code>audio/x-wav</code>, <code>audio/wave</code>,
          <code>audio/flac</code>, <code>audio/mpeg</code>, <code>audio/mp3</code>,
          <code>audio/ogg</code>, <code>audio/webm</code></p>
@@ -737,9 +785,9 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
 
     <!-- ── 3. PIPELINE ───────────────────────────────────────── -->
     <section id="pipeline">
-      <h2>Architecture &amp; Pipeline</h2>
+      <h2 data-i18n="s3_h2">Architecture &amp; Pipeline</h2>
 
-      <p>One <code>POST /api/v1/evaluate</code> request triggers seven stages.
+      <p data-i18n-html="s3_lead">One <code>POST /api/v1/evaluate</code> request triggers seven stages.
       All inference runs in a single worker; concurrency is bound by an
       <code>asyncio.Semaphore</code> (default 4 slots, queue overflow → 503).</p>
 
@@ -843,39 +891,33 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
         </svg>
       </div>
 
-      <h3>Key invariants</h3>
+      <h3 data-i18n="s3_invariants_h">Key invariants</h3>
       <ul>
-        <li><strong>Single worker only</strong> — service crashes at import-time
+        <li data-i18n-html="s3_inv1"><strong>Single worker only</strong> — service crashes at import-time
             if multi-worker is detected (1.2 GB model × N would OOM).</li>
-        <li><strong>Pre-decode duration check</strong> — ffprobe (or
+        <li data-i18n-html="s3_inv2"><strong>Pre-decode duration check</strong> — ffprobe (or
             <code>soundfile.info</code> for WAV/FLAC) rejects oversized audio
             BEFORE the full PCM expansion.</li>
-        <li><strong>Concurrency cap</strong> — auto-detected via
+        <li data-i18n-html="s3_inv3"><strong>Concurrency cap</strong> — auto-detected via
             <code>os.sched_getaffinity</code>, capped at 4 slots.</li>
-        <li><strong>503 on queue overflow</strong> — clients should retry with
+        <li data-i18n-html="s3_inv4"><strong>503 on queue overflow</strong> — clients should retry with
             backoff (see Errors section).</li>
       </ul>
-
-      <h3>Compact text view</h3>
-<pre class="ascii">Audio + Ref ─▶ Validate ─▶ Decode ─▶ ASR ─┬─▶ GOP ──┐
-                                          ├─▶ IPA ──┤
-                                          ├─▶ Pros ─┼─▶ Combine ─▶ JSON
-                                          └─▶ Flu ──┘</pre>
     </section>
 
     <!-- ── 4. HOW SCORING WORKS ─────────────────────────────── -->
     <section id="scoring">
-      <h2>How Scoring Works</h2>
+      <h2 data-i18n="s4_h2">How Scoring Works</h2>
 
-      <p>The previous section showed the engineering flow. This section
+      <p data-i18n-html="s4_lead1">The previous section showed the engineering flow. This section
       explains the <strong>algorithm</strong>: how the final 0-100 score is
       derived from the ASR transcription.</p>
 
-      <p>Scoring runs four <strong>independent</strong> sub-scores from
+      <p data-i18n-html="s4_lead2">Scoring runs four <strong>independent</strong> sub-scores from
       different signals, then combines them with an Azure-style weighted
       average that intentionally penalises the weakest dimension.</p>
 
-      <h3>High-level scoring flow</h3>
+      <h3 data-i18n="s4_flow_h">High-level scoring flow</h3>
 
       <div class="diagram-wrapper">
         <svg viewBox="0 0 880 480" xmlns="http://www.w3.org/2000/svg" role="img"
@@ -991,42 +1033,42 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
         </svg>
       </div>
 
-      <h3>Sub-score formulas (compact reference)</h3>
+      <h3 data-i18n="s4_formulas_h">Sub-score formulas (compact reference)</h3>
       <table>
         <thead>
-          <tr><th>Sub-score</th><th>Formula</th><th>Signal source</th><th>Range</th></tr>
+          <tr><th data-i18n="s4_th_subscore">Sub-score</th><th data-i18n="s4_th_formula">Formula</th><th data-i18n="s4_th_signal">Signal source</th><th data-i18n="s4_th_range">Range</th></tr>
         </thead>
         <tbody>
           <tr>
-            <td><strong>Accuracy</strong></td>
+            <td><strong data-i18n="s4_row_acc">Accuracy</strong></td>
             <td><code>0.55·IPA + 0.45·GOP</code></td>
-            <td>per-phoneme correctness + CTC log-prob</td>
+            <td data-i18n="s4_row_acc_signal">per-phoneme correctness + CTC log-prob</td>
             <td>0–100</td>
           </tr>
           <tr>
-            <td><strong>Completeness</strong></td>
+            <td><strong data-i18n="s4_row_comp">Completeness</strong></td>
             <td><code>correct_words / total_ref_words × 100</code></td>
-            <td>word-level alignment + ≥60% accuracy threshold</td>
+            <td data-i18n="s4_row_comp_signal">word-level alignment + ≥60% accuracy threshold</td>
             <td>0–100</td>
           </tr>
           <tr>
-            <td><strong>Fluency</strong></td>
+            <td><strong data-i18n="s4_row_flu">Fluency</strong></td>
             <td><code>0.4·RateScore + 0.6·PauseScore</code></td>
-            <td>speech rate + inter-word pause analysis</td>
+            <td data-i18n="s4_row_flu_signal">speech rate + inter-word pause analysis</td>
             <td>0–100</td>
           </tr>
           <tr>
-            <td><strong>Prosody</strong></td>
+            <td><strong data-i18n="s4_row_pro">Prosody</strong></td>
             <td><code>0.55·Intonation + 0.20·Speed + 0.25·Rhythm</code></td>
-            <td>pitch variance/range/contour + nPVI</td>
+            <td data-i18n="s4_row_pro_signal">pitch variance/range/contour + nPVI</td>
             <td>0–100</td>
           </tr>
         </tbody>
       </table>
 
-      <h3>Why the sort? Azure-style weighting</h3>
+      <h3 data-i18n="s4_sort_h">Why the sort? Azure-style weighting</h3>
 
-      <p>Sub-scores are sorted ascending then weighted asymmetrically: the
+      <p data-i18n-html="s4_sort_p">Sub-scores are sorted ascending then weighted asymmetrically: the
       lowest gets <strong>40%</strong>, the other three split the remaining
       <strong>60%</strong> (20% each). This intentionally
       <strong>penalises the weakest dimension most heavily</strong> — a user
@@ -1034,33 +1076,33 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
       sub-scores. The formula matches Azure Speech SDK's PronScore behaviour.</p>
 
       <div class="callout">
-        <strong>Why sort, not average?</strong>
-        A simple average treats all sub-scores equally and lets a strong one
+        <strong data-i18n="s4_callout_t">Why sort, not average?</strong>
+        <span data-i18n="s4_callout_b">A simple average treats all sub-scores equally and lets a strong one
         compensate for a weak one. The sorted formula reflects how a human
         listener perceives speech: the worst dimension dominates the
-        impression.
+        impression.</span>
       </div>
 
-      <h3>Quality levels</h3>
+      <h3 data-i18n="s4_levels_h">Quality levels</h3>
       <table>
-        <thead><tr><th>Score range</th><th>Level</th><th>Feedback</th></tr></thead>
+        <thead><tr><th data-i18n="s4_th_range_score">Score range</th><th data-i18n="s4_th_level">Level</th><th data-i18n="s4_th_feedback">Feedback</th></tr></thead>
         <tbody>
-          <tr><td><strong>80 – 100</strong></td><td><span class="level-pip excellent" aria-hidden="true"></span>Excellent</td><td>Speech closely matches the reference</td></tr>
-          <tr><td><strong>60 – 79</strong></td><td><span class="level-pip good" aria-hidden="true"></span>Good</td><td>Minor improvements could be made</td></tr>
-          <tr><td><strong>40 – 59</strong></td><td><span class="level-pip fair" aria-hidden="true"></span>Fair</td><td>Several sounds need practice</td></tr>
-          <tr><td><strong>0 – 39</strong></td><td><span class="level-pip poor" aria-hidden="true"></span>Poor</td><td>Significant improvement needed</td></tr>
+          <tr><td><strong>80 – 100</strong></td><td><span class="level-pip excellent" aria-hidden="true"></span><span data-i18n="quality_excellent">Excellent</span></td><td data-i18n="quality_excellent_d">Speech closely matches the reference</td></tr>
+          <tr><td><strong>60 – 79</strong></td><td><span class="level-pip good" aria-hidden="true"></span><span data-i18n="quality_good">Good</span></td><td data-i18n="quality_good_d">Minor improvements could be made</td></tr>
+          <tr><td><strong>40 – 59</strong></td><td><span class="level-pip fair" aria-hidden="true"></span><span data-i18n="quality_fair">Fair</span></td><td data-i18n="quality_fair_d">Several sounds need practice</td></tr>
+          <tr><td><strong>0 – 39</strong></td><td><span class="level-pip poor" aria-hidden="true"></span><span data-i18n="quality_poor">Poor</span></td><td data-i18n="quality_poor_d">Significant improvement needed</td></tr>
         </tbody>
       </table>
 
       <details>
-        <summary>
+        <summary data-i18n-html="s4_details_summary">
           Detailed numeric example — <em>"hello world"</em> → <em>"hallo world"</em>
         </summary>
 
-        <p style="margin-top:14px;">User reads <em>"hello world"</em>; ASR transcribes <em>"hallo world"</em>
+        <p style="margin-top:14px;" data-i18n-html="s4_details_intro">User reads <em>"hello world"</em>; ASR transcribes <em>"hallo world"</em>
         (1 vowel substitution: <code>ɛ → æ</code> in the first word).</p>
 
-        <h4 style="margin:18px 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-2);">Step 1 — Per-word IPA alignment</h4>
+        <h4 data-i18n="s4_step1" style="margin:18px 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-2);">Step 1 — Per-word IPA alignment</h4>
 <pre><code>"hello":  ref [h, ɛ, l, oʊ]    actual [h, æ, l, oʊ]
           h=h ✓  ɛ→æ (different group, conf=0.0)  l=l ✓  oʊ=oʊ ✓
           → 3/4 correct = 75%
@@ -1071,7 +1113,7 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
 
 Overall IPA accuracy = 7/8 = 87.5%</code></pre>
 
-        <h4 style="margin:18px 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-2);">Step 2 — GOP scoring (CTC log-prob normalised)</h4>
+        <h4 data-i18n="s4_step2" style="margin:18px 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-2);">Step 2 — GOP scoring (CTC log-prob normalised)</h4>
 <pre><code>For each phoneme: average log-prob over its frames,
   clamp to [-25, -3], linear remap to [0, 100].
 
@@ -1081,13 +1123,13 @@ Overall IPA accuracy = 7/8 = 87.5%</code></pre>
 
   Overall GOP = mean = 61.81</code></pre>
 
-        <h4 style="margin:18px 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-2);">Step 3 — Compute the four sub-scores</h4>
+        <h4 data-i18n="s4_step3" style="margin:18px 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-2);">Step 3 — Compute the four sub-scores</h4>
 <pre><code>Accuracy     = 0.55 × 87.5  + 0.45 × 61.81  = 48.13 + 27.81  = 75.94
 Completeness = 2 / 2 × 100  (both words attempted ≥60%)        = 100.00
 Fluency      = 0.4 × Rate(95.0) + 0.6 × Pause(91.0)            =  92.60
 Prosody      = 0.55·Int(80) + 0.20·Spd(75) + 0.25·Rhythm(75)   =  77.75</code></pre>
 
-        <h4 style="margin:18px 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-2);">Step 4 — Sort ascending and combine</h4>
+        <h4 data-i18n="s4_step4" style="margin:18px 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-2);">Step 4 — Sort ascending and combine</h4>
 <pre><code>Sub-scores: [Accuracy=75.94, Completeness=100, Fluency=92.60, Prosody=77.75]
 Sorted:     [s₀=75.94, s₁=77.75, s₂=92.60, s₃=100.00]
 
@@ -1107,19 +1149,19 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
       </details>
 
       <div class="callout warning" style="margin-top:24px;">
-        <strong>Source of truth</strong>
-        Numeric example values mirror <code>README.md</code>'s scoring
+        <strong data-i18n="s4_source_t">Source of truth</strong>
+        <span data-i18n-html="s4_source_b">Numeric example values mirror <code>README.md</code>'s scoring
         example. For implementation details see
         <code>app/services/pronunciation_service.py</code>; for constants
-        rationale see <code>docs/scoring-constants.md</code>.
+        rationale see <code>docs/scoring-constants.md</code>.</span>
       </div>
     </section>
 
     <!-- ── 5. API REFERENCE ─────────────────────────────────── -->
     <section id="api-reference">
-      <h2>API Reference</h2>
+      <h2 data-i18n="s5_h2">API Reference</h2>
 
-      <p>All endpoints live under <code>/api/v1/*</code> except <code>/health</code>.
+      <p data-i18n-html="s5_lead">All endpoints live under <code>/api/v1/*</code> except <code>/health</code>.
       Protected endpoints require <code>X-API-Key</code>. JSON responses unless
       stated otherwise.</p>
 
@@ -1128,12 +1170,12 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
         <div class="endpoint-head">
           <span class="method post">POST</span>
           <span class="path">/api/v1/evaluate</span>
-          <span class="auth required">API key required</span>
+          <span class="auth required" data-i18n="auth_required">API key required</span>
         </div>
         <div class="endpoint-body">
-          <p>Score a recording against a reference. Main endpoint.</p>
+          <p data-i18n="ep_eval_d">Score a recording against a reference. Main endpoint.</p>
 
-          <h4>Request (multipart/form-data)</h4>
+          <h4 data-i18n="ep_h4_request">Request (multipart/form-data)</h4>
           <table>
             <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
             <tbody>
@@ -1144,7 +1186,7 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
             </tbody>
           </table>
 
-          <h4>Response (200)</h4>
+          <h4 data-i18n="ep_h4_response">Response (200)</h4>
           <pre><code>{
   "reference_text": "hello world",
   "transcribed_text": "hallo world",
@@ -1171,7 +1213,7 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
   }
 }</code></pre>
 
-          <h4>Errors</h4>
+          <h4 data-i18n="ep_h4_errors">Errors</h4>
           <table>
             <thead><tr><th>Code</th><th>When</th></tr></thead>
             <tbody>
@@ -1193,12 +1235,12 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
         <div class="endpoint-head">
           <span class="method post">POST</span>
           <span class="path">/api/v1/transcribe</span>
-          <span class="auth required">API key required</span>
+          <span class="auth required" data-i18n="auth_required">API key required</span>
         </div>
         <div class="endpoint-body">
-          <p>Transcription only — no scoring. Same Wav2Vec2 model.</p>
+          <p data-i18n="ep_trans_d">Transcription only — no scoring. Same Wav2Vec2 model.</p>
 
-          <h4>Request (multipart/form-data)</h4>
+          <h4 data-i18n="ep_h4_request">Request (multipart/form-data)</h4>
           <table>
             <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
             <tbody>
@@ -1207,11 +1249,11 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
             </tbody>
           </table>
 
-          <h4>Response (200)</h4>
+          <h4 data-i18n="ep_h4_response">Response (200)</h4>
           <pre><code>{ "transcription": "hello world", "duration_sec": 2.35 }</code></pre>
 
-          <h4>Errors</h4>
-          <p>Same matrix as <code>/evaluate</code>, except no <span class="status s4xx">422</span> (no <code>reference_text</code>).</p>
+          <h4 data-i18n="ep_h4_errors">Errors</h4>
+          <p data-i18n-html="ep_trans_errors">Same matrix as <code>/evaluate</code>, except no <span class="status s4xx">422</span> (no <code>reference_text</code>).</p>
         </div>
       </div>
 
@@ -1220,13 +1262,13 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
         <div class="endpoint-head">
           <span class="method get">GET</span>
           <span class="path">/api/v1/text-analysis?text=...</span>
-          <span class="auth required">API key required</span>
+          <span class="auth required" data-i18n="auth_required">API key required</span>
         </div>
         <div class="endpoint-body">
-          <p>Convert English text to IPA with per-word phoneme breakdown. No
+          <p data-i18n="ep_text_d">Convert English text to IPA with per-word phoneme breakdown. No
           audio required. Useful for previewing the reference before evaluation.</p>
 
-          <h4>Query params</h4>
+          <h4 data-i18n="ep_h4_query">Query params</h4>
           <table>
             <thead><tr><th>Param</th><th>Type</th><th>Notes</th></tr></thead>
             <tbody>
@@ -1235,7 +1277,7 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
             </tbody>
           </table>
 
-          <h4>Response (200)</h4>
+          <h4 data-i18n="ep_h4_response">Response (200)</h4>
           <pre><code>{
   "text": "hello world",
   "ipa":  "hɛloʊ wɝld",
@@ -1252,13 +1294,13 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
         <div class="endpoint-head">
           <span class="method get">GET</span>
           <span class="path">/api/v1/model-info</span>
-          <span class="auth">public</span>
+          <span class="auth" data-i18n="auth_public">public</span>
         </div>
         <div class="endpoint-body">
-          <p>Service metadata + capability list. Useful for client-side UI
+          <p data-i18n="ep_model_d">Service metadata + capability list. Useful for client-side UI
           rendering of supported formats / limits without hard-coding them.</p>
 
-          <h4>Response (200)</h4>
+          <h4 data-i18n="ep_h4_response">Response (200)</h4>
           <pre><code>{
   "app_name": "Pronunciation Validator",
   "app_version": "1.0.0",
@@ -1278,13 +1320,13 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
         <div class="endpoint-head">
           <span class="method get">GET</span>
           <span class="path">/health</span>
-          <span class="auth">public</span>
+          <span class="auth" data-i18n="auth_public">public</span>
         </div>
         <div class="endpoint-body">
-          <p>Liveness probe. Returns service + model status. Used by Coolify
+          <p data-i18n="ep_health_d">Liveness probe. Returns service + model status. Used by Coolify
           health checks (120 s timeout configured).</p>
 
-          <h4>Response (200)</h4>
+          <h4 data-i18n="ep_h4_response">Response (200)</h4>
           <pre><code>{ "status": "ok", "model_loaded": true }</code></pre>
         </div>
       </div>
@@ -1292,10 +1334,10 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
 
     <!-- ── 5. AUTH & INTERNAL MODE ──────────────────────────── -->
     <section id="auth">
-      <h2>Authentication &amp; Internal Microservice Mode</h2>
+      <h2 data-i18n="s6_h2">Authentication &amp; Internal Microservice Mode</h2>
 
-      <h3>Standard auth — X-API-Key</h3>
-      <p>Every protected endpoint requires <code>X-API-Key</code>. Generate a
+      <h3 data-i18n="s6_std_h">Standard auth — X-API-Key</h3>
+      <p data-i18n-html="s6_std_p">Every protected endpoint requires <code>X-API-Key</code>. Generate a
       strong key:</p>
       <pre><code>python -c "import secrets; print(secrets.token_urlsafe(32))"</code></pre>
 
@@ -1310,23 +1352,23 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
       </table>
 
       <div class="callout warning">
-        <strong>Production guard</strong>
-        With <code>DEBUG=false</code>, startup fails immediately if
+        <strong data-i18n="s6_prod_t">Production guard</strong>
+        <span data-i18n-html="s6_prod_b">With <code>DEBUG=false</code>, startup fails immediately if
         <code>API_KEY</code> is empty, &lt; 32 chars, or matches a known weak
-        placeholder (e.g. <code>change-me</code>, <code>test</code>).
+        placeholder (e.g. <code>change-me</code>, <code>test</code>).</span>
       </div>
 
-      <h3>Internal Microservice Mode (per-user rate limit)</h3>
+      <h3 data-i18n="s6_internal_h">Internal Microservice Mode (per-user rate limit)</h3>
 
-      <p>By default the service rate-limits per source IP. When you call it
+      <p data-i18n="s6_internal_p1">By default the service rate-limits per source IP. When you call it
       from your own backend, all your users share that one IP — 1000 users
       would burn a single quota.</p>
 
-      <p>Per-user keying lets the service rate-limit on the real end-user you
+      <p data-i18n="s6_internal_p2">Per-user keying lets the service rate-limit on the real end-user you
       forward in a header. Each user gets their own quota; one spammy user
       doesn't affect the others.</p>
 
-      <h4>Headers contract</h4>
+      <h4 data-i18n="s6_headers_h">Headers contract</h4>
       <table>
         <thead><tr><th>Header</th><th>Required when</th><th>Purpose</th></tr></thead>
         <tbody>
@@ -1338,7 +1380,7 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
         </tbody>
       </table>
 
-      <h4>Decision table — what becomes the rate-limit key</h4>
+      <h4 data-i18n="s6_decision_h">Decision table — what becomes the rate-limit key</h4>
       <table>
         <thead>
           <tr><th>Direct TCP peer</th><th>Service auth match</th>
@@ -1353,19 +1395,19 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
       </table>
 
       <div class="callout success">
-        <strong>Spoof-safe by design</strong>
-        Trust gate uses the <strong>direct TCP peer</strong>, not the
+        <strong data-i18n="s6_spoof_t">Spoof-safe by design</strong>
+        <span data-i18n-html="s6_spoof_b">Trust gate uses the <strong>direct TCP peer</strong>, not the
         XFF-resolved address. An attacker on <code>1.2.3.4</code> cannot
-        forge <code>X-Forwarded-For: 172.17.0.5</code> to bypass the check.
+        forge <code>X-Forwarded-For: 172.17.0.5</code> to bypass the check.</span>
       </div>
 
-      <h4>Anonymous users</h4>
-      <p>For users who haven't logged in (trial / demo widget):</p>
+      <h4 data-i18n="s6_anon_h">Anonymous users</h4>
+      <p data-i18n="s6_anon_p1">For users who haven't logged in (trial / demo widget):</p>
       <pre><code>X-End-User-Id: anon-&lt;session-uuid&gt;</code></pre>
-      <p>Generate the UUID client-side, store in <code>localStorage</code>, one
+      <p data-i18n-html="s6_anon_p2">Generate the UUID client-side, store in <code>localStorage</code>, one
       per browser tab.</p>
 
-      <h4>TypeScript wrapper (with retry-backoff)</h4>
+      <h4 data-i18n="s6_ts_h">TypeScript wrapper (with retry-backoff)</h4>
 <pre><code>const SERVICE_URL   = process.env.PRONUNCIATION_URL!;
 const API_KEY       = process.env.PRONUNCIATION_API_KEY!;
 const SERVICE_AUTH  = process.env.PRONUNCIATION_SERVICE_AUTH!;
@@ -1398,7 +1440,7 @@ export async function evaluatePronunciation(
   throw new Error("Service unavailable after 3 retries");
 }</code></pre>
 
-      <h4>Python wrapper</h4>
+      <h4 data-i18n="s6_py_h">Python wrapper</h4>
 <pre><code>import asyncio, os, httpx
 
 URL          = os.environ["PRONUNCIATION_URL"]
@@ -1427,7 +1469,7 @@ async def evaluate(audio: bytes, reference_text: str, user_id: str) -&gt; dict:
             return r.json()
     raise RuntimeError("Service unavailable after 3 retries")</code></pre>
 
-      <h4>Default rate limits</h4>
+      <h4 data-i18n="s6_rates_h">Default rate limits</h4>
       <table>
         <thead><tr><th>Endpoint</th><th>Per key/min</th><th>Env var</th></tr></thead>
         <tbody>
@@ -1437,24 +1479,24 @@ async def evaluate(audio: bytes, reference_text: str, user_id: str) -&gt; dict:
         </tbody>
       </table>
 
-      <p>Limit applies <em>per key</em>: when keyed by IP, all users behind
+      <p data-i18n-html="s6_limit_p">Limit applies <em>per key</em>: when keyed by IP, all users behind
       that IP share the cap; when keyed by <code>user:&lt;id&gt;</code>, each
       end-user has their own.</p>
 
-      <p>See <code>docs/internal-integration.md</code> in the source repo for
+      <p data-i18n-html="s6_seedocs_p">See <code>docs/internal-integration.md</code> in the source repo for
       the operational notes (secret storage, key rotation, service-mesh
       caveats, narrow-CIDR setup).</p>
     </section>
 
     <!-- ── 6. ERRORS & RETRY ────────────────────────────────── -->
     <section id="errors">
-      <h2>Error Handling &amp; Retry</h2>
+      <h2 data-i18n="s7_h2">Error Handling &amp; Retry</h2>
 
-      <p>Every error response has the same envelope:</p>
+      <p data-i18n="s7_lead">Every error response has the same envelope:</p>
       <pre><code>{ "detail": "&lt;human-readable message&gt;",
   "error_code": "&lt;machine code&gt;" }</code></pre>
 
-      <h3>Status matrix</h3>
+      <h3 data-i18n="s7_status_h">Status matrix</h3>
       <table>
         <thead><tr><th>Code</th><th>Meaning</th><th>Recommended client action</th></tr></thead>
         <tbody>
@@ -1470,30 +1512,30 @@ async def evaluate(audio: bytes, reference_text: str, user_id: str) -&gt; dict:
       </table>
 
       <div class="callout warning">
-        <strong>Don't auto-retry 429</strong>
-        429 means the user (or the BE keyed by IP) has burned their quota.
+        <strong data-i18n="s7_429_t">Don't auto-retry 429</strong>
+        <span data-i18n="s7_429_b">429 means the user (or the BE keyed by IP) has burned their quota.
         Auto-retrying just confirms the cap and burns more time. Surface
-        the error and let the user wait it out, or upgrade their tier.
+        the error and let the user wait it out, or upgrade their tier.</span>
       </div>
 
-      <h3>Retry-backoff pattern</h3>
-      <p>503 carries <code>Retry-After</code> in seconds. Use it as an upper
+      <h3 data-i18n="s7_retry_h">Retry-backoff pattern</h3>
+      <p data-i18n-html="s7_retry_p">503 carries <code>Retry-After</code> in seconds. Use it as an upper
       bound, but apply exponential backoff for the lower bound:</p>
 <pre><code>delay_seconds = min(2 ** attempt, int(retry_after_header))
 # attempt: 0 → 1 s, 1 → 2 s, 2 → 4 s; max 3 attempts</code></pre>
 
-      <p>Real wrappers shown in the
+      <p data-i18n-html="s7_real_p">Real wrappers shown in the
         <a href="#auth">Authentication &amp; Internal Mode</a> section.</p>
 
-      <h3>Common pitfalls</h3>
+      <h3 data-i18n="s7_pitfalls_h">Common pitfalls</h3>
       <ul>
-        <li><strong>"Could not determine audio duration"</strong> — usually
+        <li data-i18n-html="s7_pit1"><strong>"Could not determine audio duration"</strong> — usually
             ffmpeg/ffprobe missing on the server. Install the system package
             or rely on <code>imageio-ffmpeg</code>.</li>
-        <li><strong>Permanent 429 in production</strong> — you're keying by IP.
+        <li data-i18n-html="s7_pit2"><strong>Permanent 429 in production</strong> — you're keying by IP.
             Enable <a href="#auth">Internal Microservice Mode</a> and forward
             <code>X-End-User-Id</code>.</li>
-        <li><strong>504 on perfectly normal audio</strong> — likely
+        <li data-i18n-html="s7_pit3"><strong>504 on perfectly normal audio</strong> — likely
             CPU-starved container or model not warmed up. Send 1 dummy
             request after deploy.</li>
       </ul>
@@ -1501,17 +1543,17 @@ async def evaluate(audio: bytes, reference_text: str, user_id: str) -&gt; dict:
 
     <!-- ── 7. DEPLOYMENT ────────────────────────────────────── -->
     <section id="deploy">
-      <h2>Deployment</h2>
+      <h2 data-i18n="s8_h2">Deployment</h2>
 
-      <p>Service ships two build paths in sync:</p>
+      <p data-i18n="s8_lead">Service ships two build paths in sync:</p>
       <ul>
-        <li><strong>Coolify (production)</strong> — Nixpacks via
+        <li data-i18n-html="s8_path_coolify"><strong>Coolify (production)</strong> — Nixpacks via
           <code>nixpacks.toml</code>, runs as non-root <code>appuser</code>.</li>
-        <li><strong>Docker (local / fallback)</strong> — multi-stage Python 3.11
+        <li data-i18n-html="s8_path_docker"><strong>Docker (local / fallback)</strong> — multi-stage Python 3.11
           slim image with model baked at build time.</li>
       </ul>
 
-      <h3>System requirements</h3>
+      <h3 data-i18n="s8_sysreq_h">System requirements</h3>
       <table>
         <thead><tr><th>Resource</th><th>Minimum</th><th>Recommended</th></tr></thead>
         <tbody>
@@ -1522,7 +1564,7 @@ async def evaluate(audio: bytes, reference_text: str, user_id: str) -&gt; dict:
         </tbody>
       </table>
 
-      <h3>Environment variables (reference)</h3>
+      <h3 data-i18n="s8_envvars_h">Environment variables (reference)</h3>
       <table>
         <thead><tr><th>Variable</th><th>Default</th><th>Purpose</th></tr></thead>
         <tbody>
@@ -1541,7 +1583,7 @@ async def evaluate(audio: bytes, reference_text: str, user_id: str) -&gt; dict:
         </tbody>
       </table>
 
-      <h3>Coolify quick deploy</h3>
+      <h3 data-i18n="s8_coolify_h">Coolify quick deploy</h3>
       <ol>
         <li>Push repo to GitHub / GitLab.</li>
         <li>Coolify → New service → Public repo → select branch.</li>
@@ -1554,7 +1596,7 @@ async def evaluate(audio: bytes, reference_text: str, user_id: str) -&gt; dict:
         <li>Deploy. Watch logs for "All models loaded ✓".</li>
       </ol>
 
-      <h3>Docker quick deploy</h3>
+      <h3 data-i18n="s8_docker_h">Docker quick deploy</h3>
       <pre><code>docker build -t pronunciation-service .
 docker run -d \
   -p 8000:8000 \
@@ -1562,21 +1604,21 @@ docker run -d \
   --name pronun \
   pronunciation-service</code></pre>
 
-      <h3>Verification after deploy</h3>
+      <h3 data-i18n="s8_verify_h">Verification after deploy</h3>
 <pre><code>docker exec pronun whoami            # → appuser (non-root)
 docker exec pronun which ffprobe     # → /usr/bin/ffprobe
 curl http://localhost:8000/health    # → {"status":"ok","model_loaded":true}
 curl http://localhost:8000/api/v1/model-info | jq</code></pre>
 
       <div class="callout">
-        <strong>Single-worker constraint</strong>
-        Each worker loads ~1.2 GB (base) or ~2.5 GB (large) of model state.
+        <strong data-i18n="s8_singleworker_t">Single-worker constraint</strong>
+        <span data-i18n-html="s8_singleworker_b">Each worker loads ~1.2 GB (base) or ~2.5 GB (large) of model state.
         Scale by adding <em>containers</em>, not workers. The service crashes
-        at import-time if it detects multiple workers configured.
+        at import-time if it detects multiple workers configured.</span>
       </div>
 
-      <h3>Operational logs</h3>
-      <p>Production logs are JSON one-line-per-record (loguru
+      <h3 data-i18n="s8_logs_h">Operational logs</h3>
+      <p data-i18n-html="s8_logs_p">Production logs are JSON one-line-per-record (loguru
       <code>serialize=True</code>). Each request emits one
       <code>request_completed</code> entry:</p>
       <pre><code>{ "request_id": "&lt;uuid&gt;",
@@ -1585,15 +1627,15 @@ curl http://localhost:8000/api/v1/model-info | jq</code></pre>
   "status":     200,
   "latency_ms": 234.5,
   "client_ip":  "ip:172.17.0.5" }</code></pre>
-      <p>Tail via <code>docker logs -f pronun | jq</code>. The
+      <p data-i18n-html="s8_tail_p">Tail via <code>docker logs -f pronun | jq</code>. The
       <code>request_id</code> is server-generated; the
       <code>X-Request-ID</code> request header is intentionally ignored to
       prevent log injection.</p>
     </section>
 
     <footer style="margin-top:48px; padding-top:24px; border-top:1px solid var(--border); color:var(--text-3); font-size:13px;">
-      <p>Pronunciation Validation Service — single-page developer docs.</p>
-      <p>Source of truth: <code>README.md</code> and <code>docs/*.md</code> in
+      <p data-i18n="footer_p1">Pronunciation Validation Service — single-page developer docs.</p>
+      <p data-i18n-html="footer_p2">Source of truth: <code>README.md</code> and <code>docs/*.md</code> in
          the project repository. When those change, sync this file.</p>
     </footer>
 
@@ -1714,6 +1756,480 @@ curl http://localhost:8000/api/v1/model-info | jq</code></pre>
         });
       });
     });
+  })();
+
+  // ── i18n: language switcher (EN / VI / ZH) ─────────────
+  // Translations object — to add a key:
+  //   1. Add data-i18n="<key>" to the HTML element
+  //   2. Add an entry under en/vi/zh below
+  //   3. Reload page; click VI/ZH to verify
+  // Keys missing from a language fall back to the HTML default text.
+  // Mixed content with inline <code> uses data-i18n-html (innerHTML swap).
+  // ZH translations: drafted by Claude, REVIEW by native speaker before ship.
+  (function () {
+    var i18n = {
+      en: {
+        ui_menu: 'Menu',
+        nav_grp_getstarted: 'Get Started',
+        nav_grp_api: 'API',
+        nav_grp_integration: 'Integration',
+        nav_overview: 'Overview',
+        nav_quickstart: 'Quick Start',
+        nav_pipeline: 'Architecture & Pipeline',
+        nav_scoring: 'How Scoring Works',
+        nav_apiref: 'API Reference',
+        nav_auth: 'Authentication & Internal Mode',
+        nav_errors: 'Error Handling & Retry',
+        nav_deploy: 'Deployment',
+        s1_h1: 'Pronunciation Validation Service',
+        s1_lead: 'REST API that scores English pronunciation by comparing audio recordings against reference text. Returns IPA-level phoneme comparison, Goodness-of-Pronunciation (GOP), prosody, fluency, and an overall score compatible with Azure Speech sub-scores.',
+        s1_card_ipa_t: 'IPA Comparison',
+        s1_card_ipa_d: 'Per-phoneme alignment using Levenshtein DP with phonetic-similarity costs.',
+        s1_card_gop_t: 'GOP Scoring',
+        s1_card_gop_d: 'CTC log-posterior based, with remainder-aware frame distribution.',
+        s1_card_pro_t: 'Prosody Analysis',
+        s1_card_pro_d: 'Pitch via librosa pyin; intonation, range, contour, monotone detection.',
+        s1_card_flu_t: 'Fluency Metrics',
+        s1_card_flu_d: 'Speech rate + pause analysis from CTC forced-alignment word timing.',
+        s1_techstack_h: 'Tech stack',
+        s1_ts_web: 'Web:', s1_ts_model: 'ASR model:', s1_ts_ipa: 'IPA:',
+        s1_ts_audio: 'Audio:', s1_ts_auth: 'Auth:', s1_ts_deploy: 'Deploy:',
+        s1_callout_t: 'Audience',
+        s1_callout_b: 'This page is for developers integrating the service from their own backend. For end-user UX, scoring rationale, or the full API contract, see <code>README.md</code> and <code>docs/scoring-constants.md</code> in the source repo.',
+        s2_h2: 'Quick Start',
+        s2_lead: 'Send an audio file plus the reference text. The service replies with a complete pronunciation report.',
+        s2_curl_h: 'Minimal cURL',
+        s2_resp_h: 'Sample response (truncated)',
+        s3_h2: 'Architecture & Pipeline',
+        s3_lead: 'One <code>POST /api/v1/evaluate</code> request triggers seven stages. All inference runs in a single worker; concurrency is bound by an <code>asyncio.Semaphore</code> (default 4 slots, queue overflow → 503).',
+        s4_h2: 'How Scoring Works',
+        s4_lead1: 'The previous section showed the engineering flow. This section explains the <strong>algorithm</strong>: how the final 0-100 score is derived from the ASR transcription.',
+        s4_lead2: 'Scoring runs four <strong>independent</strong> sub-scores from different signals, then combines them with an Azure-style weighted average that intentionally penalises the weakest dimension.',
+        s5_h2: 'API Reference',
+        s6_h2: 'Authentication & Internal Microservice Mode',
+        s7_h2: 'Error Handling & Retry',
+        s8_h2: 'Deployment',
+        // Section 2 extras
+        s2_constraints_h: 'Constraints (defaults)',
+        s2_formats_h: 'Supported audio formats',
+        // Section 3 extras
+        s3_invariants_h: 'Key invariants',
+        s3_inv1: '<strong>Single worker only</strong> — service crashes at import-time if multi-worker is detected (1.2 GB model × N would OOM).',
+        s3_inv2: '<strong>Pre-decode duration check</strong> — ffprobe (or <code>soundfile.info</code> for WAV/FLAC) rejects oversized audio BEFORE the full PCM expansion.',
+        s3_inv3: '<strong>Concurrency cap</strong> — auto-detected via <code>os.sched_getaffinity</code>, capped at 4 slots.',
+        s3_inv4: '<strong>503 on queue overflow</strong> — clients should retry with backoff (see Errors section).',
+        // Section 4 extras
+        s4_flow_h: 'High-level scoring flow',
+        s4_formulas_h: 'Sub-score formulas (compact reference)',
+        s4_th_subscore: 'Sub-score', s4_th_formula: 'Formula', s4_th_signal: 'Signal source', s4_th_range: 'Range',
+        s4_row_acc: 'Accuracy', s4_row_acc_signal: 'per-phoneme correctness + CTC log-prob',
+        s4_row_comp: 'Completeness', s4_row_comp_signal: 'word-level alignment + ≥60% accuracy threshold',
+        s4_row_flu: 'Fluency', s4_row_flu_signal: 'speech rate + inter-word pause analysis',
+        s4_row_pro: 'Prosody', s4_row_pro_signal: 'pitch variance/range/contour + nPVI',
+        s4_sort_h: 'Why the sort? Azure-style weighting',
+        s4_sort_p: 'Sub-scores are sorted ascending then weighted asymmetrically: the lowest gets <strong>40%</strong>, the other three split the remaining <strong>60%</strong> (20% each). This intentionally <strong>penalises the weakest dimension most heavily</strong> — a user with great accuracy but monotone prosody can\'t hide behind the strong sub-scores. The formula matches Azure Speech SDK\'s PronScore behaviour.',
+        s4_callout_t: 'Why sort, not average?',
+        s4_callout_b: 'A simple average treats all sub-scores equally and lets a strong one compensate for a weak one. The sorted formula reflects how a human listener perceives speech: the worst dimension dominates the impression.',
+        s4_levels_h: 'Quality levels',
+        s4_th_range_score: 'Score range', s4_th_level: 'Level', s4_th_feedback: 'Feedback',
+        quality_excellent: 'Excellent', quality_excellent_d: 'Speech closely matches the reference',
+        quality_good: 'Good',           quality_good_d: 'Minor improvements could be made',
+        quality_fair: 'Fair',           quality_fair_d: 'Several sounds need practice',
+        quality_poor: 'Poor',           quality_poor_d: 'Significant improvement needed',
+        s4_details_summary: 'Detailed numeric example — <em>"hello world"</em> → <em>"hallo world"</em>',
+        s4_details_intro: 'User reads <em>"hello world"</em>; ASR transcribes <em>"hallo world"</em> (1 vowel substitution: <code>ɛ → æ</code> in the first word).',
+        s4_source_t: 'Source of truth',
+        s4_source_b: 'Numeric example values mirror <code>README.md</code>\'s scoring example. For implementation details see <code>app/services/pronunciation_service.py</code>; for constants rationale see <code>docs/scoring-constants.md</code>.',
+        // Section 5 extras
+        s5_lead: 'All endpoints live under <code>/api/v1/*</code> except <code>/health</code>. Protected endpoints require <code>X-API-Key</code>. JSON responses unless stated otherwise.',
+        ep_h4_request: 'Request (multipart/form-data)',
+        ep_h4_response: 'Response (200)',
+        ep_h4_errors: 'Errors',
+        ep_h4_query: 'Query params',
+        auth_required: 'API key required',
+        auth_public: 'public',
+        // Section 6 extras
+        s6_std_h: 'Standard auth — X-API-Key',
+        s6_prod_t: 'Production guard',
+        s6_prod_b: 'With <code>DEBUG=false</code>, startup fails immediately if <code>API_KEY</code> is empty, &lt; 32 chars, or matches a known weak placeholder (e.g. <code>change-me</code>, <code>test</code>).',
+        s6_internal_h: 'Internal Microservice Mode (per-user rate limit)',
+        s6_internal_p1: 'By default the service rate-limits per source IP. When you call it from your own backend, all your users share that one IP — 1000 users would burn a single quota.',
+        s6_internal_p2: 'Per-user keying lets the service rate-limit on the real end-user you forward in a header. Each user gets their own quota; one spammy user doesn\'t affect the others.',
+        s6_headers_h: 'Headers contract',
+        s6_decision_h: 'Decision table — what becomes the rate-limit key',
+        s6_spoof_t: 'Spoof-safe by design',
+        s6_spoof_b: 'Trust gate uses the <strong>direct TCP peer</strong>, not the XFF-resolved address. An attacker on <code>1.2.3.4</code> cannot forge <code>X-Forwarded-For: 172.17.0.5</code> to bypass the check.',
+        s6_anon_h: 'Anonymous users',
+        s6_anon_p1: 'For users who haven\'t logged in (trial / demo widget):',
+        s6_anon_p2: 'Generate the UUID client-side, store in <code>localStorage</code>, one per browser tab.',
+        s6_ts_h: 'TypeScript wrapper (with retry-backoff)',
+        s6_py_h: 'Python wrapper',
+        s6_rates_h: 'Default rate limits',
+        // Section 7 extras
+        s7_lead: 'Every error response has the same envelope:',
+        s7_status_h: 'Status matrix',
+        s7_429_t: 'Don\'t auto-retry 429',
+        s7_429_b: '429 means the user (or the BE keyed by IP) has burned their quota. Auto-retrying just confirms the cap and burns more time. Surface the error and let the user wait it out, or upgrade their tier.',
+        s7_retry_h: 'Retry-backoff pattern',
+        s7_retry_p: '503 carries <code>Retry-After</code> in seconds. Use it as an upper bound, but apply exponential backoff for the lower bound:',
+        s7_pitfalls_h: 'Common pitfalls',
+        // Section 8 extras
+        s8_lead: 'Service ships two build paths in sync:',
+        s8_path_coolify: '<strong>Coolify (production)</strong> — Nixpacks via <code>nixpacks.toml</code>, runs as non-root <code>appuser</code>.',
+        s8_path_docker: '<strong>Docker (local / fallback)</strong> — multi-stage Python 3.11 slim image with model baked at build time.',
+        s8_sysreq_h: 'System requirements',
+        s8_envvars_h: 'Environment variables (reference)',
+        s8_coolify_h: 'Coolify quick deploy',
+        s8_docker_h: 'Docker quick deploy',
+        s8_verify_h: 'Verification after deploy',
+        s8_singleworker_t: 'Single-worker constraint',
+        s8_singleworker_b: 'Each worker loads ~1.2 GB (base) or ~2.5 GB (large) of model state. Scale by adding <em>containers</em>, not workers. The service crashes at import-time if it detects multiple workers configured.',
+        s8_logs_h: 'Operational logs',
+        s8_logs_p: 'Production logs are JSON one-line-per-record (loguru <code>serialize=True</code>). Each request emits one <code>request_completed</code> entry:',
+        // Footer
+        footer_p1: 'Pronunciation Validation Service — single-page developer docs.',
+        footer_p2: 'Source of truth: <code>README.md</code> and <code>docs/*.md</code> in the project repository. When those change, sync this file.',
+        // Final pass extras
+        s4_step1: 'Step 1 — Per-word IPA alignment',
+        s4_step2: 'Step 2 — GOP scoring (CTC log-prob normalised)',
+        s4_step3: 'Step 3 — Compute the four sub-scores',
+        s4_step4: 'Step 4 — Sort ascending and combine',
+        ep_eval_d: 'Score a recording against a reference. Main endpoint.',
+        ep_trans_d: 'Transcription only — no scoring. Same Wav2Vec2 model.',
+        ep_trans_errors: 'Same matrix as <code>/evaluate</code>, except no <span class="status s4xx">422</span> (no <code>reference_text</code>).',
+        ep_text_d: 'Convert English text to IPA with per-word phoneme breakdown. No audio required. Useful for previewing the reference before evaluation.',
+        ep_model_d: 'Service metadata + capability list. Useful for client-side UI rendering of supported formats / limits without hard-coding them.',
+        ep_health_d: 'Liveness probe. Returns service + model status. Used by Coolify health checks (120 s timeout configured).',
+        s6_std_p: 'Every protected endpoint requires <code>X-API-Key</code>. Generate a strong key:',
+        s6_limit_p: 'Limit applies <em>per key</em>: when keyed by IP, all users behind that IP share the cap; when keyed by <code>user:&lt;id&gt;</code>, each end-user has their own.',
+        s6_seedocs_p: 'See <code>docs/internal-integration.md</code> in the source repo for the operational notes (secret storage, key rotation, service-mesh caveats, narrow-CIDR setup).',
+        s7_real_p: 'Real wrappers shown in the <a href="#auth">Authentication &amp; Internal Mode</a> section.',
+        s7_pit1: '<strong>"Could not determine audio duration"</strong> — usually ffmpeg/ffprobe missing on the server. Install the system package or rely on <code>imageio-ffmpeg</code>.',
+        s7_pit2: '<strong>Permanent 429 in production</strong> — you\'re keying by IP. Enable <a href="#auth">Internal Microservice Mode</a> and forward <code>X-End-User-Id</code>.',
+        s7_pit3: '<strong>504 on perfectly normal audio</strong> — likely CPU-starved container or model not warmed up. Send 1 dummy request after deploy.',
+        s8_tail_p: 'Tail via <code>docker logs -f pronun | jq</code>. The <code>request_id</code> is server-generated; the <code>X-Request-ID</code> request header is intentionally ignored to prevent log injection.',
+      },
+      vi: {
+        ui_menu: 'Menu',
+        nav_grp_getstarted: 'Bắt đầu',
+        nav_grp_api: 'API',
+        nav_grp_integration: 'Tích hợp',
+        nav_overview: 'Tổng quan',
+        nav_quickstart: 'Bắt đầu nhanh',
+        nav_pipeline: 'Kiến trúc & Pipeline',
+        nav_scoring: 'Cách chấm điểm',
+        nav_apiref: 'Tài liệu API',
+        nav_auth: 'Xác thực & Internal Mode',
+        nav_errors: 'Xử lý lỗi & Retry',
+        nav_deploy: 'Triển khai',
+        s1_h1: 'Pronunciation Validation Service',
+        s1_lead: 'REST API chấm điểm phát âm tiếng Anh bằng cách so sánh audio với reference text. Trả về so sánh phoneme cấp IPA, điểm Goodness-of-Pronunciation (GOP), prosody, fluency, và overall score tương thích với Azure Speech sub-scores.',
+        s1_card_ipa_t: 'So sánh IPA',
+        s1_card_ipa_d: 'Căn chỉnh phoneme bằng Levenshtein DP với chi phí phonetic-similarity.',
+        s1_card_gop_t: 'Chấm điểm GOP',
+        s1_card_gop_d: 'Dựa trên CTC log-posterior, phân phối frame xử lý cả phần dư.',
+        s1_card_pro_t: 'Phân tích Prosody',
+        s1_card_pro_d: 'Pitch qua librosa pyin; intonation, range, contour, phát hiện monotone.',
+        s1_card_flu_t: 'Metric Fluency',
+        s1_card_flu_d: 'Tốc độ nói + phân tích pause từ word-timing forced-alignment CTC.',
+        s1_techstack_h: 'Tech stack',
+        s1_ts_web: 'Web:', s1_ts_model: 'Mô hình ASR:', s1_ts_ipa: 'IPA:',
+        s1_ts_audio: 'Audio:', s1_ts_auth: 'Auth:', s1_ts_deploy: 'Triển khai:',
+        s1_callout_t: 'Đối tượng đọc',
+        s1_callout_b: 'Trang này dành cho developer tích hợp service từ backend của họ. Để xem UX end-user, lý do chấm điểm, hoặc full API contract, xem <code>README.md</code> và <code>docs/scoring-constants.md</code> trong source repo.',
+        s2_h2: 'Bắt đầu nhanh',
+        s2_lead: 'Gửi file audio kèm reference text. Service trả về báo cáo phát âm đầy đủ.',
+        s2_curl_h: 'cURL tối giản',
+        s2_resp_h: 'Mẫu response (rút gọn)',
+        s3_h2: 'Kiến trúc & Pipeline',
+        s3_lead: 'Một request <code>POST /api/v1/evaluate</code> sẽ trigger 7 stages. Tất cả inference chạy trong một worker; concurrency giới hạn bởi <code>asyncio.Semaphore</code> (mặc định 4 slot, queue đầy → 503).',
+        s4_h2: 'Cách chấm điểm',
+        s4_lead1: 'Section trước hiển thị engineering flow. Section này giải thích <strong>thuật toán</strong>: điểm cuối 0-100 được tính ra sao từ ASR transcription.',
+        s4_lead2: 'Chấm điểm chạy 4 sub-score <strong>độc lập</strong> từ các tín hiệu khác nhau, rồi combine bằng weighted average kiểu Azure — cố tình phạt nặng dimension yếu nhất.',
+        s5_h2: 'Tài liệu API',
+        s6_h2: 'Xác thực & Internal Microservice Mode',
+        s7_h2: 'Xử lý lỗi & Retry',
+        s8_h2: 'Triển khai',
+        // Section 2 extras
+        s2_constraints_h: 'Giới hạn (mặc định)',
+        s2_formats_h: 'Định dạng audio hỗ trợ',
+        // Section 3 extras
+        s3_invariants_h: 'Quy ước bất biến',
+        s3_inv1: '<strong>Chỉ một worker duy nhất</strong> — service crash ngay tại import-time nếu detect multi-worker (1.2 GB model × N sẽ OOM).',
+        s3_inv2: '<strong>Pre-decode duration check</strong> — ffprobe (hoặc <code>soundfile.info</code> cho WAV/FLAC) reject audio quá dài TRƯỚC khi giải mã PCM đầy đủ.',
+        s3_inv3: '<strong>Concurrency cap</strong> — auto-detect qua <code>os.sched_getaffinity</code>, cap tối đa 4 slot.',
+        s3_inv4: '<strong>503 khi queue đầy</strong> — client cần retry với backoff (xem section Errors).',
+        // Section 4 extras
+        s4_flow_h: 'Flow chấm điểm tổng quan',
+        s4_formulas_h: 'Công thức sub-score (tham khảo nhanh)',
+        s4_th_subscore: 'Sub-score', s4_th_formula: 'Công thức', s4_th_signal: 'Nguồn tín hiệu', s4_th_range: 'Khoảng',
+        s4_row_acc: 'Accuracy', s4_row_acc_signal: 'phoneme đúng + CTC log-prob',
+        s4_row_comp: 'Completeness', s4_row_comp_signal: 'word-level alignment + ngưỡng accuracy ≥60%',
+        s4_row_flu: 'Fluency', s4_row_flu_signal: 'tốc độ nói + phân tích pause giữa từ',
+        s4_row_pro: 'Prosody', s4_row_pro_signal: 'pitch variance/range/contour + nPVI',
+        s4_sort_h: 'Tại sao phải sort? Trọng số kiểu Azure',
+        s4_sort_p: 'Sub-score được sort tăng dần rồi weighted bất đối xứng: thấp nhất nhận <strong>40%</strong>, ba dimension còn lại chia <strong>60%</strong> (mỗi cái 20%). Đây là cố ý <strong>phạt nặng dimension yếu nhất</strong> — user accuracy giỏi nhưng prosody monotone không thể giấu được. Công thức khớp với Azure Speech SDK PronScore.',
+        s4_callout_t: 'Tại sao sort thay vì average?',
+        s4_callout_b: 'Average đối xử mọi sub-score như nhau, cho phép một dimension mạnh bù trừ cho dimension yếu. Công thức sort phản ánh cách listener cảm nhận: dimension tệ nhất chi phối ấn tượng tổng thể.',
+        s4_levels_h: 'Mức chất lượng',
+        s4_th_range_score: 'Khoảng điểm', s4_th_level: 'Mức', s4_th_feedback: 'Phản hồi',
+        quality_excellent: 'Xuất sắc (Excellent)', quality_excellent_d: 'Phát âm rất sát với reference',
+        quality_good: 'Tốt (Good)',                quality_good_d: 'Có thể cải thiện một chút',
+        quality_fair: 'Trung bình (Fair)',         quality_fair_d: 'Một số âm cần luyện thêm',
+        quality_poor: 'Kém (Poor)',                quality_poor_d: 'Cần cải thiện đáng kể',
+        s4_details_summary: 'Ví dụ tính số chi tiết — <em>"hello world"</em> → <em>"hallo world"</em>',
+        s4_details_intro: 'User đọc <em>"hello world"</em>; ASR transcribe ra <em>"hallo world"</em> (1 vowel substitution: <code>ɛ → æ</code> ở từ đầu).',
+        s4_source_t: 'Source of truth',
+        s4_source_b: 'Số liệu trong ví dụ khớp với scoring example trong <code>README.md</code>. Chi tiết implementation xem <code>app/services/pronunciation_service.py</code>; lý do về constants xem <code>docs/scoring-constants.md</code>.',
+        // Section 5 extras
+        s5_lead: 'Tất cả endpoint nằm dưới <code>/api/v1/*</code> ngoại trừ <code>/health</code>. Endpoint protected cần <code>X-API-Key</code>. JSON response trừ khi nói khác.',
+        ep_h4_request: 'Request (multipart/form-data)',
+        ep_h4_response: 'Response (200)',
+        ep_h4_errors: 'Lỗi',
+        ep_h4_query: 'Query params',
+        auth_required: 'cần API key',
+        auth_public: 'công khai',
+        // Section 6 extras
+        s6_std_h: 'Auth chuẩn — X-API-Key',
+        s6_prod_t: 'Production guard',
+        s6_prod_b: 'Khi <code>DEBUG=false</code>, service crash ngay startup nếu <code>API_KEY</code> rỗng, &lt; 32 ký tự, hoặc khớp placeholder yếu (vd: <code>change-me</code>, <code>test</code>).',
+        s6_internal_h: 'Internal Microservice Mode (rate limit per-user)',
+        s6_internal_p1: 'Mặc định service rate-limit theo source IP. Khi gọi từ backend của bạn, tất cả user share chung 1 IP — 1000 user sẽ ăn hết 1 quota.',
+        s6_internal_p2: 'Per-user keying cho phép service rate-limit theo end-user thật mà bạn forward qua header. Mỗi user có quota riêng; 1 user spam không ảnh hưởng người khác.',
+        s6_headers_h: 'Headers contract',
+        s6_decision_h: 'Decision table — key rate-limit được tính ra sao',
+        s6_spoof_t: 'An toàn chống spoof by design',
+        s6_spoof_b: 'Trust gate dùng <strong>direct TCP peer</strong>, KHÔNG phải XFF-resolved address. Attacker từ <code>1.2.3.4</code> không thể giả mạo <code>X-Forwarded-For: 172.17.0.5</code> để bypass.',
+        s6_anon_h: 'User ẩn danh',
+        s6_anon_p1: 'Cho user chưa login (trial / demo widget):',
+        s6_anon_p2: 'Generate UUID phía client, lưu trong <code>localStorage</code>, mỗi tab browser một UUID.',
+        s6_ts_h: 'Wrapper TypeScript (kèm retry-backoff)',
+        s6_py_h: 'Wrapper Python',
+        s6_rates_h: 'Rate limit mặc định',
+        // Section 7 extras
+        s7_lead: 'Mọi error response có cùng envelope:',
+        s7_status_h: 'Bảng status',
+        s7_429_t: 'Đừng auto-retry 429',
+        s7_429_b: '429 nghĩa là user (hoặc BE key by IP) đã hết quota. Auto-retry chỉ xác nhận cap và tốn thêm thời gian. Hiển thị lỗi cho user, để user chờ qua hoặc upgrade tier.',
+        s7_retry_h: 'Pattern retry-backoff',
+        s7_retry_p: '503 mang theo <code>Retry-After</code> tính bằng giây. Dùng đó làm upper bound, nhưng áp dụng exponential backoff cho lower bound:',
+        s7_pitfalls_h: 'Lỗi thường gặp',
+        // Section 8 extras
+        s8_lead: 'Service ship hai build path đồng bộ:',
+        s8_path_coolify: '<strong>Coolify (production)</strong> — Nixpacks qua <code>nixpacks.toml</code>, chạy với non-root <code>appuser</code>.',
+        s8_path_docker: '<strong>Docker (local / fallback)</strong> — multi-stage Python 3.11 slim image với model bake sẵn lúc build.',
+        s8_sysreq_h: 'Yêu cầu hệ thống',
+        s8_envvars_h: 'Biến môi trường (tham khảo)',
+        s8_coolify_h: 'Deploy nhanh Coolify',
+        s8_docker_h: 'Deploy nhanh Docker',
+        s8_verify_h: 'Verify sau khi deploy',
+        s8_singleworker_t: 'Ràng buộc single-worker',
+        s8_singleworker_b: 'Mỗi worker load ~1.2 GB (base) hoặc ~2.5 GB (large) model state. Scale bằng cách thêm <em>container</em>, KHÔNG phải worker. Service crash ngay tại import-time nếu detect cấu hình nhiều worker.',
+        s8_logs_h: 'Logs vận hành',
+        s8_logs_p: 'Production log là JSON một dòng mỗi record (loguru <code>serialize=True</code>). Mỗi request emit một entry <code>request_completed</code>:',
+        // Footer
+        footer_p1: 'Pronunciation Validation Service — docs developer single-page.',
+        footer_p2: 'Source of truth: <code>README.md</code> và <code>docs/*.md</code> trong project repo. Khi những file đó update, hãy sync trang này.',
+        // Final pass extras
+        s4_step1: 'Bước 1 — Căn chỉnh IPA theo từng từ',
+        s4_step2: 'Bước 2 — Chấm điểm GOP (chuẩn hoá CTC log-prob)',
+        s4_step3: 'Bước 3 — Tính 4 sub-score',
+        s4_step4: 'Bước 4 — Sort tăng dần và combine',
+        ep_eval_d: 'Chấm điểm bản ghi so với reference. Endpoint chính.',
+        ep_trans_d: 'Chỉ transcribe — không chấm điểm. Dùng cùng model Wav2Vec2.',
+        ep_trans_errors: 'Bảng error giống <code>/evaluate</code>, ngoại trừ không có <span class="status s4xx">422</span> (không có <code>reference_text</code>).',
+        ep_text_d: 'Chuyển text tiếng Anh thành IPA kèm breakdown phoneme từng từ. Không cần audio. Hữu ích để xem trước reference trước khi evaluate.',
+        ep_model_d: 'Metadata service + capability list. Hữu ích cho client render UI dựa vào supported formats / limits mà không hardcode.',
+        ep_health_d: 'Liveness probe. Trả về trạng thái service + model. Coolify dùng cho health check (120s timeout).',
+        s6_std_p: 'Mọi endpoint protected đều cần <code>X-API-Key</code>. Generate key mạnh:',
+        s6_limit_p: 'Limit áp dụng <em>per key</em>: khi key by IP, tất cả user sau IP đó share chung cap; khi key by <code>user:&lt;id&gt;</code>, mỗi end-user có cap riêng.',
+        s6_seedocs_p: 'Xem <code>docs/internal-integration.md</code> trong source repo cho operational notes (secret storage, key rotation, service-mesh caveats, narrow-CIDR setup).',
+        s7_real_p: 'Wrapper thực tế hiển thị trong section <a href="#auth">Xác thực & Internal Mode</a>.',
+        s7_pit1: '<strong>"Could not determine audio duration"</strong> — thường do thiếu ffmpeg/ffprobe trên server. Cài system package hoặc dựa vào <code>imageio-ffmpeg</code>.',
+        s7_pit2: '<strong>429 vĩnh viễn ở production</strong> — bạn đang key by IP. Bật <a href="#auth">Internal Microservice Mode</a> và forward <code>X-End-User-Id</code>.',
+        s7_pit3: '<strong>504 với audio bình thường</strong> — có thể container thiếu CPU hoặc model chưa warm up. Gửi 1 request dummy sau khi deploy.',
+        s8_tail_p: 'Tail bằng <code>docker logs -f pronun | jq</code>. <code>request_id</code> do server tạo; header <code>X-Request-ID</code> từ client cố tình bị ignore để tránh log injection.',
+      },
+      zh: {
+        ui_menu: '菜单',
+        nav_grp_getstarted: '开始使用',
+        nav_grp_api: 'API',
+        nav_grp_integration: '集成',
+        nav_overview: '概览',
+        nav_quickstart: '快速开始',
+        nav_pipeline: '架构与流程',
+        nav_scoring: '评分原理',
+        nav_apiref: 'API 参考',
+        nav_auth: '鉴权与内部模式',
+        nav_errors: '错误处理与重试',
+        nav_deploy: '部署',
+        s1_h1: 'Pronunciation Validation Service',
+        s1_lead: '通过将音频与参考文本对比来评估英语发音质量的 REST API。返回 IPA 级音素比较、发音良好度（GOP）、韵律、流畅度，以及与 Azure Speech 子评分兼容的综合得分。',
+        s1_card_ipa_t: 'IPA 比较',
+        s1_card_ipa_d: '采用 Levenshtein DP 算法进行音素对齐，含语音相似度代价。',
+        s1_card_gop_t: 'GOP 评分',
+        s1_card_gop_d: '基于 CTC 对数后验概率，使用余数感知帧分配。',
+        s1_card_pro_t: '韵律分析',
+        s1_card_pro_d: '通过 librosa pyin 提取音高；包含语调、音域、轮廓、单调检测。',
+        s1_card_flu_t: '流畅度指标',
+        s1_card_flu_d: '基于 CTC 强制对齐词级时序的语速 + 停顿分析。',
+        s1_techstack_h: '技术栈',
+        s1_ts_web: 'Web:', s1_ts_model: 'ASR 模型:', s1_ts_ipa: 'IPA:',
+        s1_ts_audio: '音频:', s1_ts_auth: '鉴权:', s1_ts_deploy: '部署:',
+        s1_callout_t: '目标读者',
+        s1_callout_b: '此页面面向从自己的后端集成本服务的开发者。如需了解终端用户 UX、评分原理或完整 API 契约，请参阅源代码仓库中的 <code>README.md</code> 与 <code>docs/scoring-constants.md</code>。',
+        s2_h2: '快速开始',
+        s2_lead: '发送音频文件以及参考文本。服务将返回完整的发音报告。',
+        s2_curl_h: '最小 cURL 示例',
+        s2_resp_h: '响应示例（节选）',
+        s3_h2: '架构与流程',
+        s3_lead: '一次 <code>POST /api/v1/evaluate</code> 请求会触发七个阶段。所有推理在单个 worker 中运行；并发由 <code>asyncio.Semaphore</code> 限制（默认 4 个槽位，队列溢出 → 503）。',
+        s4_h2: '评分原理',
+        s4_lead1: '上一节展示了工程流程。本节讲解<strong>算法</strong>：最终 0-100 分如何从 ASR 转写结果计算得出。',
+        s4_lead2: '评分系统从不同信号源运行 4 个<strong>独立</strong>子评分，然后采用 Azure 风格的加权平均算法合并 —— 故意对最弱维度施加最大权重。',
+        s5_h2: 'API 参考',
+        s6_h2: '鉴权与内部微服务模式',
+        s7_h2: '错误处理与重试',
+        s8_h2: '部署',
+        // Section 2 extras
+        s2_constraints_h: '约束（默认值）',
+        s2_formats_h: '支持的音频格式',
+        // Section 3 extras
+        s3_invariants_h: '关键不变量',
+        s3_inv1: '<strong>仅限单 worker</strong> — 检测到多 worker 配置时服务在 import 阶段崩溃（1.2 GB 模型 × N 会 OOM）。',
+        s3_inv2: '<strong>解码前时长检查</strong> — ffprobe（WAV/FLAC 用 <code>soundfile.info</code>）会在完整 PCM 展开之前拒绝过长音频。',
+        s3_inv3: '<strong>并发上限</strong> — 通过 <code>os.sched_getaffinity</code> 自动检测，最多 4 个槽位。',
+        s3_inv4: '<strong>队列溢出返回 503</strong> — 客户端应使用退避策略重试（参见错误章节）。',
+        // Section 4 extras
+        s4_flow_h: '高层评分流程',
+        s4_formulas_h: '子评分公式（简明参考）',
+        s4_th_subscore: '子评分', s4_th_formula: '公式', s4_th_signal: '信号源', s4_th_range: '范围',
+        s4_row_acc: 'Accuracy', s4_row_acc_signal: '逐音素正确性 + CTC 对数概率',
+        s4_row_comp: 'Completeness', s4_row_comp_signal: '词级对齐 + accuracy ≥60% 阈值',
+        s4_row_flu: 'Fluency', s4_row_flu_signal: '语速 + 词间停顿分析',
+        s4_row_pro: 'Prosody', s4_row_pro_signal: '音高方差/音域/轮廓 + nPVI',
+        s4_sort_h: '为什么要排序？Azure 风格加权',
+        s4_sort_p: '子评分按升序排序后采用非对称加权：最低值获得 <strong>40%</strong>，其余三个均分剩余 <strong>60%</strong>（每个 20%）。这是<strong>故意对最弱维度施加最重处罚</strong> —— 用户即使 accuracy 极佳但韵律单调也无法靠强项掩盖。该公式与 Azure Speech SDK 的 PronScore 行为一致。',
+        s4_callout_t: '为什么排序而不是平均？',
+        s4_callout_b: '简单平均把所有子评分等同对待，让强项可以补偿弱项。排序公式反映了人类听者的感知方式：最差的维度主导整体印象。',
+        s4_levels_h: '质量等级',
+        s4_th_range_score: '分数范围', s4_th_level: '等级', s4_th_feedback: '反馈',
+        quality_excellent: '优秀 (Excellent)', quality_excellent_d: '发音与参考文本高度匹配',
+        quality_good: '良好 (Good)',           quality_good_d: '稍作改进会更好',
+        quality_fair: '一般 (Fair)',           quality_fair_d: '部分音素需要加强练习',
+        quality_poor: '较差 (Poor)',           quality_poor_d: '需要显著改进',
+        s4_details_summary: '详细数值示例 — <em>"hello world"</em> → <em>"hallo world"</em>',
+        s4_details_intro: '用户朗读 <em>"hello world"</em>；ASR 转写为 <em>"hallo world"</em>（首词出现 1 个元音替换：<code>ɛ → æ</code>）。',
+        s4_source_t: '权威来源',
+        s4_source_b: '示例数值与 <code>README.md</code> 中的评分示例一致。实现细节参见 <code>app/services/pronunciation_service.py</code>；常量取值依据参见 <code>docs/scoring-constants.md</code>。',
+        // Section 5 extras
+        s5_lead: '所有端点位于 <code>/api/v1/*</code>，<code>/health</code> 除外。受保护端点需要 <code>X-API-Key</code>。除非另行说明均返回 JSON。',
+        ep_h4_request: '请求 (multipart/form-data)',
+        ep_h4_response: '响应 (200)',
+        ep_h4_errors: '错误',
+        ep_h4_query: '查询参数',
+        auth_required: '需要 API 密钥',
+        auth_public: '公开',
+        // Section 6 extras
+        s6_std_h: '标准鉴权 — X-API-Key',
+        s6_prod_t: '生产环境守卫',
+        s6_prod_b: '当 <code>DEBUG=false</code> 时，若 <code>API_KEY</code> 为空、长度 &lt; 32 字符，或匹配已知弱占位符（如 <code>change-me</code>、<code>test</code>），服务将在启动时立即失败。',
+        s6_internal_h: '内部微服务模式（per-user 限流）',
+        s6_internal_p1: '默认情况下服务按 source IP 限流。当从你自己的后端调用时，所有用户共享同一个 IP —— 1000 个用户会耗尽单个配额。',
+        s6_internal_p2: 'Per-user 键控允许服务按你转发在 header 里的真实终端用户进行限流。每个用户都有自己的配额；某个滥用用户不会影响其他用户。',
+        s6_headers_h: 'Header 契约',
+        s6_decision_h: '决策表 — 限流键如何确定',
+        s6_spoof_t: '设计上防伪造',
+        s6_spoof_b: '信任门控使用<strong>直接 TCP 对端</strong>，而不是 XFF 解析后的地址。位于 <code>1.2.3.4</code> 的攻击者无法通过伪造 <code>X-Forwarded-For: 172.17.0.5</code> 来绕过检查。',
+        s6_anon_h: '匿名用户',
+        s6_anon_p1: '对于尚未登录的用户（试用 / 演示组件）：',
+        s6_anon_p2: '在客户端生成 UUID 并存入 <code>localStorage</code>，每个浏览器标签页一个 UUID。',
+        s6_ts_h: 'TypeScript 封装（含退避重试）',
+        s6_py_h: 'Python 封装',
+        s6_rates_h: '默认限流',
+        // Section 7 extras
+        s7_lead: '所有错误响应使用统一的信封格式：',
+        s7_status_h: '状态码矩阵',
+        s7_429_t: '不要自动重试 429',
+        s7_429_b: '429 表示用户（或按 IP 键控的 BE）已耗尽其配额。自动重试只会再次确认上限并浪费时间。请把错误展示给用户，让其等待或升级套餐。',
+        s7_retry_h: '退避重试模式',
+        s7_retry_p: '503 在响应头携带 <code>Retry-After</code>（单位：秒）。将其作为上限，同时对下限采用指数退避：',
+        s7_pitfalls_h: '常见陷阱',
+        // Section 8 extras
+        s8_lead: '服务同步交付两条构建路径：',
+        s8_path_coolify: '<strong>Coolify（生产）</strong> — 通过 <code>nixpacks.toml</code> 使用 Nixpacks，以非 root 用户 <code>appuser</code> 运行。',
+        s8_path_docker: '<strong>Docker（本地 / 备用）</strong> — 多阶段 Python 3.11 slim 镜像，构建时已烘焙模型。',
+        s8_sysreq_h: '系统要求',
+        s8_envvars_h: '环境变量（参考）',
+        s8_coolify_h: 'Coolify 快速部署',
+        s8_docker_h: 'Docker 快速部署',
+        s8_verify_h: '部署后验证',
+        s8_singleworker_t: '单 worker 约束',
+        s8_singleworker_b: '每个 worker 加载 ~1.2 GB（基础模型）或 ~2.5 GB（大模型）的模型状态。请通过增加<em>容器</em>来扩展，而不是 worker。检测到多 worker 配置时服务在 import 阶段崩溃。',
+        s8_logs_h: '运维日志',
+        s8_logs_p: '生产日志为每行一条 JSON 记录（loguru <code>serialize=True</code>）。每个请求会发出一条 <code>request_completed</code> 条目：',
+        // Footer
+        footer_p1: 'Pronunciation Validation Service — 单页开发者文档。',
+        footer_p2: '权威来源：项目仓库中的 <code>README.md</code> 与 <code>docs/*.md</code>。当那些文件变化时，请同步更新此文件。',
+        // Final pass extras
+        s4_step1: '步骤 1 — 逐词 IPA 对齐',
+        s4_step2: '步骤 2 — GOP 评分（CTC 对数概率归一化）',
+        s4_step3: '步骤 3 — 计算四个子评分',
+        s4_step4: '步骤 4 — 升序排序并合并',
+        ep_eval_d: '将录音与参考文本对照评分。主要端点。',
+        ep_trans_d: '仅转写 — 不评分。使用同一个 Wav2Vec2 模型。',
+        ep_trans_errors: '错误矩阵与 <code>/evaluate</code> 相同，区别在于没有 <span class="status s4xx">422</span>（无 <code>reference_text</code>）。',
+        ep_text_d: '将英语文本转换为 IPA，并按词拆分音素。无需音频。在评估之前预览参考文本时很有用。',
+        ep_model_d: '服务元数据 + 能力清单。便于客户端 UI 渲染时使用，无需硬编码支持的格式 / 限制。',
+        ep_health_d: '存活探针。返回服务与模型状态。Coolify 健康检查（已配置 120s 超时）使用此端点。',
+        s6_std_p: '每个受保护端点都需要 <code>X-API-Key</code>。生成强密钥：',
+        s6_limit_p: '限流按<em>键</em>生效：按 IP 键控时，该 IP 后所有用户共享上限；按 <code>user:&lt;id&gt;</code> 键控时，每个终端用户拥有独立上限。',
+        s6_seedocs_p: '运维注意事项（密钥存储、密钥轮换、服务网格注意点、缩窄 CIDR 设置）请参见源代码仓库中的 <code>docs/internal-integration.md</code>。',
+        s7_real_p: '实际封装代码请见 <a href="#auth">鉴权与内部模式</a>章节。',
+        s7_pit1: '<strong>"Could not determine audio duration"</strong> — 通常是服务器上缺少 ffmpeg/ffprobe。请安装系统包或依赖 <code>imageio-ffmpeg</code>。',
+        s7_pit2: '<strong>生产环境长期 429</strong> — 你正在按 IP 键控。请启用<a href="#auth">内部微服务模式</a>并转发 <code>X-End-User-Id</code>。',
+        s7_pit3: '<strong>正常音频出现 504</strong> — 可能是容器 CPU 不足或模型尚未预热。部署后先发送 1 个 dummy 请求。',
+        s8_tail_p: '使用 <code>docker logs -f pronun | jq</code> 跟踪。<code>request_id</code> 由服务端生成；客户端的 <code>X-Request-ID</code> 请求头会被故意忽略以防止日志注入。',
+      },
+    };
+
+    function setLang(lang) {
+      if (!i18n[lang]) lang = 'en';
+      document.documentElement.lang = lang;
+      document.documentElement.dataset.lang = lang;
+      try { localStorage.setItem('docs-lang', lang); } catch (e) {}
+
+      // Lazy-load Noto Sans SC for Chinese (only on first ZH activation)
+      if (lang === 'zh' && !document.getElementById('zh-font')) {
+        var link = document.createElement('link');
+        link.id = 'zh-font'; link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600&display=swap';
+        document.head.appendChild(link);
+      }
+
+      // Swap text content
+      document.querySelectorAll('[data-i18n]').forEach(function (el) {
+        var t = i18n[lang][el.dataset.i18n];
+        if (t != null) el.textContent = t;
+      });
+      // Swap innerHTML for mixed-content elements (with inline <code>, <strong>, etc.)
+      document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
+        var t = i18n[lang][el.dataset.i18nHtml];
+        if (t != null) el.innerHTML = t;
+      });
+      // Update switcher active state
+      document.querySelectorAll('[data-lang-btn]').forEach(function (btn) {
+        btn.classList.toggle('active', btn.dataset.langBtn === lang);
+      });
+    }
+
+    // Wire switcher buttons
+    document.querySelectorAll('[data-lang-btn]').forEach(function (btn) {
+      btn.addEventListener('click', function () { setLang(btn.dataset.langBtn); });
+    });
+
+    // Apply initial language (set early by sync <head> script)
+    setLang(document.documentElement.lang || 'en');
   })();
 </script>
 </body>
