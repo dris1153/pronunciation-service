@@ -140,6 +140,52 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 | `GET /api/v1/text-analysis` | ✅ Yes        |
 | `POST /api/v1/transcribe`   | ✅ Yes        |
 
+## 🔌 Internal Microservice Mode
+
+When this service is called from another backend (e.g., your Product BE) instead of directly by end-users, per-IP rate limiting causes **all your end-users to share one quota** — 1000 users → 1 source IP → 429 storms.
+
+Enable per-end-user rate limiting:
+
+### 1. Configure this service
+
+```bash
+# .env
+SERVICE_API_KEY=<strong-random-key>          # generate per snippet below
+TRUSTED_PROXY_CIDRS_STR=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
+```
+
+```bash
+# Generate strong service key
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+### 2. Send three headers from your backend
+
+```http
+X-API-Key:       <PRONUNCIATION_API_KEY>
+X-Service-Auth:  <SERVICE_API_KEY>
+X-End-User-Id:   <user-uuid OR anon-<session-id>>
+```
+
+### 3. Handle 503 with retry-backoff
+
+When the inference queue is full, this service returns `503 Retry-After: 30`. Your backend should retry with exponential backoff (1s, 2s, 4s, max 3 attempts).
+
+### Decision table — how the rate-limit key is derived
+
+| Direct TCP peer    | Service auth match | Valid `X-End-User-Id` | Resulting key  |
+| ------------------ | ------------------ | --------------------- | -------------- |
+| Untrusted CIDR     | (any)              | (any)                 | `ip:<peer>`    |
+| Trusted CIDR       | No                 | (any)                 | `ip:<peer>`    |
+| Trusted CIDR       | Yes                | No                    | `ip:<peer>`    |
+| Trusted CIDR       | Yes                | Yes                   | `user:<id>` ✓  |
+
+> **Spoof-safe by design** — trust gate uses the **direct TCP peer**, not the XFF-resolved address, so an attacker cannot forge `X-Forwarded-For: 172.17.0.5` to bypass the check.
+
+> **Backward compatible** — leave `SERVICE_API_KEY` empty and the service rate-limits per-IP exactly as before.
+
+See [docs/internal-integration.md](docs/internal-integration.md) for TypeScript / Python wrapper examples and full operational guidance.
+
 ## 📡API Endpoints
 
 ### `GET /health`

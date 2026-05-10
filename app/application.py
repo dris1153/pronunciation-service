@@ -1,7 +1,10 @@
 """FastAPI application factory."""
 from __future__ import annotations
 
+import os
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import FastAPI
@@ -19,12 +22,80 @@ from app.core.config import get_settings
 from app.core.logging import setup_logging
 
 
+# ── Worker count guard (Phase 02 / Finding 3) ───────────────────────────────
+# Runs at module import time so multi-worker invocations crash before any
+# 1.2 GB ASR model is loaded (would OOM the container).
+
+
+def _detect_worker_count() -> int:
+    sources: list[str | None] = [
+        os.environ.get("WEB_CONCURRENCY"),
+        os.environ.get("UVICORN_WORKERS"),
+        os.environ.get("GUNICORN_WORKERS"),
+    ]
+    for flag in ("--workers", "-w"):
+        if flag in sys.argv:
+            idx = sys.argv.index(flag)
+            if idx + 1 < len(sys.argv):
+                sources.append(sys.argv[idx + 1])
+    counts = [int(s) for s in sources if s and s.isdigit()]
+    return max(counts) if counts else 1
+
+
+_worker_count = _detect_worker_count()
+if _worker_count > 1:
+    raise RuntimeError(
+        f"Detected {_worker_count} workers but each loads ~1.2GB ASR model. "
+        f"Run with a single worker (WEB_CONCURRENCY=1, no --workers/-w flag) "
+        f"to avoid OOM. Sources checked: WEB_CONCURRENCY, UVICORN_WORKERS, "
+        f"GUNICORN_WORKERS, sys.argv."
+    )
+
+
+def _verify_writable_dirs() -> None:
+    """Verify /tmp (or TMPDIR) and the model cache dir are writable.
+
+    Aborts startup loudly via :class:`RuntimeError` if not — better to crash
+    early in container logs than fail at first request with a confusing
+    PermissionError mid-inference.
+    """
+    settings = get_settings()
+    candidates = [
+        os.environ.get("TMPDIR", "/tmp"),
+        settings.asr_model_cache_dir,
+    ]
+    for path in candidates:
+        try:
+            p = Path(path)
+            p.mkdir(parents=True, exist_ok=True)
+            test_file = p / f"_smoke_{os.getpid()}.tmp"
+            test_file.write_bytes(b"x" * 1024)
+            test_file.read_bytes()
+            test_file.unlink()
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(
+                f"Required directory {path!r} not writable: {exc}"
+            ) from exc
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Startup / shutdown lifecycle."""
     setup_logging()
     settings = get_settings()
     logger.info("Starting {} v{}", settings.app_name, settings.app_version)
+
+    # Verify writable dirs before model load — surfaces non-root perm issues
+    # immediately rather than mid-request.
+    _verify_writable_dirs()
+
+    # Log detected concurrency (Phase 02 / Finding 2)
+    from app.core.concurrency import _detect_available_cpus
+
+    logger.info(
+        "Concurrent inference slots: {} (detected via sched_getaffinity, capped)",
+        _detect_available_cpus(),
+    )
 
     # Emit API key warning after logging is configured (not at import time)
     from app.api.dependencies import warn_if_api_key_disabled

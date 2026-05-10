@@ -1,0 +1,1717 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pronunciation Validation Service — Developer Docs</title>
+<meta name="description" content="REST API that scores English pronunciation. Per-phoneme IPA comparison, GOP, prosody and fluency. Onboarding docs for backend integrators.">
+<!--
+  IMPORTANT: Self-contained, single-file docs page.
+  When README.md, docs/internal-integration.md, or docs/scoring-constants.md
+  change, grep for the relevant keywords here and update inline copies.
+  Owner: backend / docs maintainer.
+  Vibe: technical-editorial (Stripe / Linear / Anthropic API docs feel).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* ── Warm Paper palette + IBM Plex / Fraunces typography ────────────── */
+  :root {
+    --bg:         #FAFAF7;   /* warm off-white */
+    --surface:    #F2EFE8;   /* paper */
+    --surface-2:  #E8E3D8;   /* deeper paper (code blocks) */
+    --border:     #D8D2C4;   /* paper border */
+    --border-2:   #C4BCA8;   /* stronger border (hover) */
+    --ink:        #1F1B17;   /* warm off-black */
+    --ink-2:      #5C5448;   /* warm secondary */
+    --ink-3:      #8B8276;   /* warm tertiary */
+    --accent:     #C2410C;   /* burnt orange */
+    --accent-2:   #9A3412;   /* burnt orange (hover) */
+    --accent-bg:  #FED7AA;   /* burnt orange wash */
+    --success:    #15803D;   /* muted emerald */
+    --warning:    #A16207;   /* muted amber */
+    --error:      #B91C1C;   /* muted red */
+
+    --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:    'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    --font-mono:    'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+
+    --radius:    6px;
+    --radius-lg: 10px;
+    --sidebar-w: 280px;
+    --content-max: 880px;
+    --header-h:  60px;
+    --progress-h: 2px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-h) + 24px); }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.65;
+    font-size: 16px;
+    font-feature-settings: 'cv02', 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    opacity: 0;
+    animation: fadein .35s ease forwards;
+  }
+  @keyframes fadein { to { opacity: 1; } }
+
+  /* ── Atmospheric noise overlay (very subtle, multiply blend) ────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 100;
+    opacity: .04;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .8 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  /* ── Scroll progress bar (Phase 5 effect) ────────────────────────────── */
+  .scroll-progress {
+    position: fixed; top: 0; left: 0; height: var(--progress-h);
+    background: var(--accent); width: 0%;
+    z-index: 200; transition: width .08s linear;
+    box-shadow: 0 0 12px rgba(194, 65, 12, .35);
+  }
+
+  /* ── Skip link (a11y) ───────────────────────────────────────────────── */
+  .skip-link {
+    position: absolute; top: -40px; left: 8px; padding: 8px 12px;
+    background: var(--ink); color: var(--bg); border-radius: var(--radius);
+    text-decoration: none; font-size: 13px; font-weight: 500;
+    z-index: 300; transition: top .15s;
+  }
+  .skip-link:focus { top: 8px; }
+
+  /* ── Header ──────────────────────────────────────────────────────────── */
+  header.site {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(250, 250, 247, .88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    height: var(--header-h);
+    display: flex; align-items: center;
+    padding: 0 28px;
+  }
+  header.site .brand {
+    display: flex; align-items: center; gap: 12px;
+    font-family: var(--font-display);
+    font-weight: 500; font-size: 17px;
+    font-feature-settings: 'opsz' 24;
+    text-decoration: none; color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  header.site .brand .logo {
+    width: 30px; height: 30px;
+    background: var(--ink); color: var(--bg);
+    border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-weight: 500; font-size: 12px;
+    letter-spacing: 0;
+  }
+  header.site .badge {
+    margin-left: 14px; font-family: var(--font-mono);
+    font-size: 11px; font-weight: 400;
+    color: var(--ink-2); background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 3px 9px; border-radius: 999px;
+  }
+  header.site .spacer { flex: 1; }
+  header.site .menu-btn {
+    display: none;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 7px 12px;
+    cursor: pointer; color: var(--ink);
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    transition: border-color .2s, background .2s;
+  }
+  header.site .menu-btn:hover { background: var(--surface); border-color: var(--border-2); }
+
+  /* ── Layout ─────────────────────────────────────────────────────────── */
+  .shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    gap: 0;
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+
+  /* ── Sidebar ────────────────────────────────────────────────────────── */
+  aside.sidebar {
+    position: sticky; top: var(--header-h);
+    height: calc(100vh - var(--header-h));
+    overflow-y: auto;
+    padding: 32px 18px 56px 28px;
+    border-right: 1px solid var(--border);
+  }
+  aside.sidebar nav { font-size: 14px; }
+  aside.sidebar .nav-group { margin-bottom: 22px; }
+  aside.sidebar .nav-group-title {
+    font-family: var(--font-mono);
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--ink-3); margin: 0 0 8px 10px; font-weight: 500;
+  }
+  aside.sidebar a {
+    display: block; padding: 6px 10px; margin: 1px 0;
+    border-radius: var(--radius); color: var(--ink-2);
+    text-decoration: none; line-height: 1.4;
+    border-left: 2px solid transparent;
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  aside.sidebar a:hover { background: var(--surface); color: var(--ink); }
+  aside.sidebar a.active {
+    background: var(--surface);
+    color: var(--accent);
+    font-weight: 500;
+    border-left-color: var(--accent);
+  }
+  aside.sidebar a.sub {
+    padding-left: 22px; font-size: 13px;
+    font-family: var(--font-mono); font-weight: 400;
+    color: var(--ink-3);
+  }
+  aside.sidebar a.sub:hover { color: var(--ink-2); }
+  aside.sidebar a.sub.active { color: var(--accent); }
+
+  /* ── Content ────────────────────────────────────────────────────────── */
+  main.content {
+    padding: 56px 64px 120px;
+    min-width: 0;
+    max-width: calc(var(--content-max) + 128px);
+    position: relative;
+  }
+  main.content > section { margin-bottom: 88px; scroll-margin-top: 84px; }
+  main.content h1 {
+    font-family: var(--font-display);
+    font-size: clamp(38px, 5.2vw, 56px);
+    line-height: 1.05;
+    margin: 0 0 18px;
+    letter-spacing: -0.025em;
+    font-weight: 500;
+    font-feature-settings: 'opsz' 144, 'ss01';
+    color: var(--ink);
+    max-width: 18ch;
+  }
+  /* Hero radial gradient under h1 (effect layer) */
+  #overview h1 {
+    position: relative;
+  }
+  #overview h1::before {
+    content: '';
+    position: absolute;
+    top: -40px; left: -60px; right: 0; height: 220px;
+    background: radial-gradient(ellipse at 25% 50%,
+                rgba(194, 65, 12, .12) 0%,
+                rgba(194, 65, 12, 0) 60%);
+    pointer-events: none; z-index: -1;
+  }
+  main.content h2 {
+    font-family: var(--font-display);
+    font-size: clamp(26px, 3vw, 34px);
+    line-height: 1.18; margin: 56px 0 16px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+    letter-spacing: -0.018em;
+    font-weight: 500;
+    font-feature-settings: 'opsz' 96, 'ss01';
+    color: var(--ink);
+  }
+  main.content h2:first-of-type { border-top: none; padding-top: 0; margin-top: 28px; }
+  main.content h3 {
+    font-family: var(--font-display);
+    font-size: 20px; line-height: 1.3;
+    margin: 36px 0 12px;
+    font-weight: 500;
+    letter-spacing: -0.012em;
+    color: var(--ink);
+    font-feature-settings: 'opsz' 36;
+  }
+  main.content p { margin: 0 0 18px; color: var(--ink); max-width: 68ch; }
+  main.content p.lead {
+    font-size: 19px; color: var(--ink-2);
+    line-height: 1.55; max-width: 60ch;
+    font-weight: 400;
+  }
+  main.content ul, main.content ol { padding-left: 24px; margin: 0 0 18px; max-width: 68ch; }
+  main.content li { margin: 6px 0; }
+  main.content a {
+    color: var(--accent);
+    text-decoration: none;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 0% 1px;
+    transition: background-size .25s ease, color .15s;
+  }
+  main.content a:hover {
+    background-size: 100% 1px;
+    color: var(--accent-2);
+  }
+  main.content strong { font-weight: 600; color: var(--ink); }
+
+  /* ── Code ───────────────────────────────────────────────────────────── */
+  code {
+    font-family: var(--font-mono); font-size: 0.88em;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1.5px 6px;
+    color: var(--accent-2);
+    font-feature-settings: 'zero', 'ss01';
+  }
+  pre {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-family: var(--font-mono); font-size: 13px;
+    line-height: 1.62; margin: 0 0 22px;
+    color: var(--ink);
+    position: relative;
+    font-feature-settings: 'zero', 'ss01';
+  }
+  pre code {
+    background: transparent; border: 0; padding: 0;
+    font-size: inherit; color: var(--ink);
+  }
+
+  /* ── Tables ─────────────────────────────────────────────────────────── */
+  table {
+    width: 100%; border-collapse: collapse;
+    margin: 0 0 26px; font-size: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  th, td {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    text-align: left; vertical-align: top;
+  }
+  th {
+    background: var(--surface); font-weight: 600;
+    color: var(--ink-2);
+    font-family: var(--font-mono);
+    font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  tr:last-child td { border-bottom: 0; }
+  td code { white-space: nowrap; }
+
+  /* ── Callouts ───────────────────────────────────────────────────────── */
+  .callout {
+    padding: 16px 18px;
+    border-radius: var(--radius);
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    margin: 0 0 22px; font-size: 14px; color: var(--ink);
+  }
+  .callout.warning { border-left-color: var(--warning); }
+  .callout.error   { border-left-color: var(--error); }
+  .callout.success { border-left-color: var(--success); }
+  .callout strong {
+    display: block; margin-bottom: 6px;
+    font-size: 11px; font-family: var(--font-mono);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--ink-2); font-weight: 600;
+  }
+  .callout.warning strong { color: var(--warning); }
+  .callout.error strong   { color: var(--error); }
+  .callout.success strong { color: var(--success); }
+
+  /* ── Hero feature cards ─────────────────────────────────────────────── */
+  .feature-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px; margin: 32px 0 36px;
+  }
+  .feature-card {
+    border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 20px 20px 18px;
+    background: var(--surface);
+    transition: border-color .2s, transform .2s;
+  }
+  .feature-card:hover {
+    border-color: var(--border-2);
+    transform: translateY(-1px);
+  }
+  .feature-card .ico {
+    width: 32px; height: 32px;
+    border-radius: var(--radius);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 14px;
+    color: var(--accent);
+  }
+  .feature-card .ico svg { width: 18px; height: 18px; display: block; }
+  .feature-card h4 {
+    margin: 0 0 6px; font-size: 15px; font-weight: 600;
+    color: var(--ink); letter-spacing: -0.005em;
+  }
+  .feature-card p {
+    margin: 0; font-size: 13px;
+    color: var(--ink-2); line-height: 1.55;
+    max-width: none;
+  }
+
+  /* ── Endpoint card ──────────────────────────────────────────────────── */
+  .endpoint {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 0; margin: 0 0 26px; overflow: hidden;
+    background: var(--bg);
+    transition: border-color .2s;
+  }
+  .endpoint:hover { border-color: var(--border-2); }
+  .endpoint-head {
+    background: var(--surface); padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .endpoint-head .method {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    padding: 3px 9px; border-radius: 4px; color: var(--bg);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .method.get  { background: var(--success); }
+  .method.post { background: var(--accent); }
+  .endpoint-head .path {
+    font-family: var(--font-mono); font-size: 14px; font-weight: 500;
+    color: var(--ink); flex: 1; min-width: 200px;
+  }
+  .endpoint-head .auth {
+    font-size: 11px; padding: 3px 10px; border-radius: 999px;
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--ink-3);
+    font-family: var(--font-mono); letter-spacing: 0.02em;
+  }
+  .endpoint-head .auth.required { color: var(--warning); border-color: var(--warning); }
+  .endpoint-body { padding: 18px 20px; }
+  .endpoint-body h4 {
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--ink-2);
+    font-family: var(--font-mono);
+    margin: 18px 0 10px; font-weight: 600;
+  }
+  .endpoint-body h4:first-child { margin-top: 0; }
+
+  /* ── Diagrams ───────────────────────────────────────────────────────── */
+  .diagram-wrapper {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    background: var(--surface);
+    margin: 0 0 26px;
+    overflow-x: auto;
+  }
+  .diagram-wrapper svg { display: block; max-width: 100%; height: auto; }
+  pre.ascii {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    font-size: 12px; line-height: 1.42;
+  }
+
+  /* ── Status badges ──────────────────────────────────────────────────── */
+  .status {
+    display: inline-block; padding: 1px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; font-family: var(--font-mono);
+    border: 1px solid var(--border); background: var(--bg);
+    letter-spacing: 0;
+  }
+  .status.s2xx { color: var(--success); border-color: var(--success); }
+  .status.s4xx { color: var(--warning); border-color: var(--warning); }
+  .status.s5xx { color: var(--error);   border-color: var(--error); }
+
+  /* ── Quality level pips (replaces emoji) ────────────────────────────── */
+  .level-pip {
+    display: inline-block; width: 10px; height: 10px;
+    border-radius: 2px; margin-right: 6px;
+    vertical-align: middle;
+    box-shadow: inset 0 0 0 1px rgba(31, 27, 23, 0.12);
+  }
+  .level-pip.excellent { background: var(--success); }
+  .level-pip.good      { background: #0E7490; } /* deep teal — distinct from accent + warning */
+  .level-pip.fair      { background: var(--warning); }
+  .level-pip.poor      { background: var(--error); }
+
+  /* ── Details (collapsible example) ──────────────────────────────────── */
+  details {
+    margin-top: 26px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px 18px;
+    background: var(--surface);
+    transition: border-color .2s;
+  }
+  details[open] { border-color: var(--border-2); }
+  details summary {
+    cursor: pointer; font-weight: 500; color: var(--ink);
+    user-select: none; font-family: var(--font-body);
+    list-style: none; display: flex; align-items: center; gap: 10px;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before {
+    content: ''; width: 10px; height: 10px; flex: 0 0 10px;
+    border-right: 1.5px solid var(--ink-2);
+    border-bottom: 1.5px solid var(--ink-2);
+    transform: rotate(-45deg);
+    transition: transform .2s;
+  }
+  details[open] summary::before { transform: rotate(45deg); }
+  details summary em { color: var(--accent); font-style: normal; font-family: var(--font-mono); font-size: 13px; }
+
+  /* ── Footer ─────────────────────────────────────────────────────────── */
+  footer.site {
+    border-top: 1px solid var(--border);
+    padding: 36px 28px;
+    color: var(--ink-3); font-size: 13px;
+    text-align: center;
+    font-family: var(--font-mono);
+  }
+  footer.site a { color: var(--ink-2); text-decoration: underline; }
+
+  /* ── SVG icon sprite (hidden defs) ──────────────────────────────────── */
+  .icon-sprite { width: 0; height: 0; position: absolute; overflow: hidden; }
+
+  /* ── Responsive ─────────────────────────────────────────────────────── */
+  @media (max-width: 960px) {
+    .shell { grid-template-columns: 1fr; }
+    aside.sidebar {
+      position: fixed; top: var(--header-h); left: 0;
+      width: 280px; height: calc(100vh - var(--header-h));
+      background: var(--bg); z-index: 40;
+      transform: translateX(-100%); transition: transform .25s ease;
+      box-shadow: 4px 0 16px rgba(31, 27, 23, .08);
+    }
+    aside.sidebar.open { transform: translateX(0); }
+    main.content { padding: 32px 28px 80px; }
+    header.site .menu-btn { display: inline-block; }
+    #overview h1::before { display: none; }
+  }
+  @media (max-width: 480px) {
+    main.content { padding: 24px 20px 56px; }
+    header.site { padding: 0 20px; }
+    header.site .badge { display: none; }
+    pre { font-size: 12px; padding: 14px; }
+  }
+
+  /* ── Backdrop for mobile drawer ─────────────────────────────────────── */
+  .backdrop {
+    display: none; position: fixed; inset: var(--header-h) 0 0 0;
+    background: rgba(31, 27, 23, .35); z-index: 30;
+  }
+  .backdrop.show { display: block; }
+
+  /* ── Reduced motion ─────────────────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0ms !important;
+      transition-duration: 0ms !important;
+      scroll-behavior: auto !important;
+    }
+    body { opacity: 1; }
+    .scroll-progress { display: none; }
+  }
+
+  /* ── Print ──────────────────────────────────────────────────────────── */
+  @media print {
+    aside.sidebar, header.site, .backdrop, footer.site,
+    .scroll-progress, body::before { display: none !important; }
+    body { opacity: 1; }
+    main.content { padding: 0; max-width: none; }
+    pre, table { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- Scroll progress bar (Phase 5 effect) -->
+<div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+<!-- Inline SVG icon sprite — single source for all custom icons.
+     Style: outlined 1.5px stroke, sharp corners, 24x24 viewBox, geometric.
+     Replaces every emoji in the doc per anti-slop hard rule. -->
+<svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <symbol id="i-phonetics" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+      <path d="M5 6 H15 M5 12 H19 M5 18 H11"/>
+      <circle cx="19" cy="6" r="1.2" fill="currentColor"/>
+      <path d="M16 18 L20 18 M18 16 L18 20"/>
+    </symbol>
+    <symbol id="i-bars" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+      <path d="M5 19 V13 M11 19 V9 M17 19 V5"/>
+      <circle cx="20" cy="5" r="1.4" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-wave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+      <path d="M3 12 L5 12 L7 7 L9 17 L11 5 L13 19 L15 9 L17 15 L19 12 L21 12"/>
+    </symbol>
+    <symbol id="i-speed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+      <path d="M4 8 L10 12 L4 16"/>
+      <path d="M11 8 L17 12 L11 16"/>
+      <path d="M18 8 L22 12 L18 16"/>
+    </symbol>
+    <symbol id="i-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+      <path d="M14 4 H20 V10"/>
+      <path d="M20 4 L11 13"/>
+      <path d="M18 14 V19 H5 V6 H10"/>
+    </symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+      <rect x="8" y="8" width="12" height="12"/>
+      <path d="M5 16 H4 V4 H16 V5"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+      <path d="M5 12 L10 17 L19 7"/>
+    </symbol>
+    <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+      <rect x="4" y="4" width="16" height="16"/>
+      <path d="M12 11 V17"/>
+      <path d="M12 7 V8"/>
+    </symbol>
+    <symbol id="i-warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+      <path d="M12 3 L22 20 H2 Z"/>
+      <path d="M12 10 V14"/>
+      <path d="M12 16 V17"/>
+    </symbol>
+    <symbol id="i-error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+      <rect x="4" y="4" width="16" height="16"/>
+      <path d="M8 8 L16 16 M16 8 L8 16"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="site">
+  <a class="brand" href="#overview">
+    <div class="logo">PV</div>
+    <span>Pronunciation Validation Service</span>
+    <span class="badge">v1.0</span>
+  </a>
+  <span class="spacer"></span>
+  <button class="menu-btn" id="menuBtn" aria-label="Open navigation">Menu</button>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar" aria-label="Documentation navigation">
+    <nav>
+      <div class="nav-group">
+        <p class="nav-group-title">Get Started</p>
+        <a href="#overview">Overview</a>
+        <a href="#quick-start">Quick Start</a>
+        <a href="#pipeline">Architecture &amp; Pipeline</a>
+        <a href="#scoring">How Scoring Works</a>
+      </div>
+      <div class="nav-group">
+        <p class="nav-group-title">API</p>
+        <a href="#api-reference">API Reference</a>
+        <a class="sub" href="#ep-evaluate">POST /evaluate</a>
+        <a class="sub" href="#ep-transcribe">POST /transcribe</a>
+        <a class="sub" href="#ep-text-analysis">GET /text-analysis</a>
+        <a class="sub" href="#ep-model-info">GET /model-info</a>
+        <a class="sub" href="#ep-health">GET /health</a>
+      </div>
+      <div class="nav-group">
+        <p class="nav-group-title">Integration</p>
+        <a href="#auth">Authentication &amp; Internal Mode</a>
+        <a href="#errors">Error Handling &amp; Retry</a>
+        <a href="#deploy">Deployment</a>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="backdrop" id="backdrop"></div>
+
+  <main class="content" id="main">
+
+    <!-- ── 1. OVERVIEW ───────────────────────────────────────── -->
+    <section id="overview">
+      <h1>Pronunciation Validation Service</h1>
+      <p class="lead">
+        REST API that scores English pronunciation by comparing audio recordings
+        against reference text. Returns IPA-level phoneme comparison,
+        Goodness-of-Pronunciation (GOP), prosody, fluency, and an overall score
+        compatible with Azure Speech sub-scores.
+      </p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="ico" aria-hidden="true"><svg><use href="#i-phonetics"/></svg></div>
+          <h4>IPA Comparison</h4>
+          <p>Per-phoneme alignment using Levenshtein DP with phonetic-similarity costs.</p>
+        </div>
+        <div class="feature-card">
+          <div class="ico" aria-hidden="true"><svg><use href="#i-bars"/></svg></div>
+          <h4>GOP Scoring</h4>
+          <p>CTC log-posterior based, with remainder-aware frame distribution.</p>
+        </div>
+        <div class="feature-card">
+          <div class="ico" aria-hidden="true"><svg><use href="#i-wave"/></svg></div>
+          <h4>Prosody Analysis</h4>
+          <p>Pitch via librosa pyin; intonation, range, contour, monotone detection.</p>
+        </div>
+        <div class="feature-card">
+          <div class="ico" aria-hidden="true"><svg><use href="#i-speed"/></svg></div>
+          <h4>Fluency Metrics</h4>
+          <p>Speech rate + pause analysis from CTC forced-alignment word timing.</p>
+        </div>
+      </div>
+
+      <h3>Tech stack</h3>
+      <ul>
+        <li><strong>Web:</strong> FastAPI 0.115 + Uvicorn (single worker)</li>
+        <li><strong>ASR model:</strong> facebook/wav2vec2-base-960h (CPU-only build)</li>
+        <li><strong>IPA:</strong> g2p_en + ARPAbet → IPA mapping</li>
+        <li><strong>Audio:</strong> librosa, soundfile, ffmpeg</li>
+        <li><strong>Auth:</strong> X-API-Key + optional X-Service-Auth (per-user mode)</li>
+        <li><strong>Deploy:</strong> Coolify self-host via Nixpacks (or Docker)</li>
+      </ul>
+
+      <div class="callout">
+        <strong>Audience</strong>
+        This page is for developers integrating the service from their own
+        backend. For end-user UX, scoring rationale, or the full API
+        contract, see <code>README.md</code> and <code>docs/scoring-constants.md</code>
+        in the source repo.
+      </div>
+    </section>
+
+    <!-- ── 2. QUICK START ────────────────────────────────────── -->
+    <section id="quick-start">
+      <h2>Quick Start</h2>
+
+      <p>Send an audio file plus the reference text. The service replies with
+      a complete pronunciation report.</p>
+
+      <h3>Minimal cURL</h3>
+      <pre><code># Replace API_KEY with your own; sample.wav must be 16-bit mono &lt;= 30s &lt;= 10MB
+curl -X POST http://localhost:8000/api/v1/evaluate \
+  -H "X-API-Key: $API_KEY" \
+  -F "audio=@sample.wav;type=audio/wav" \
+  -F "reference_text=hello world"</code></pre>
+
+      <h3>Sample response (truncated)</h3>
+      <pre><code>{
+  "reference_text": "hello world",
+  "transcribed_text": "hello world",
+  "accuracy_score":     93.25,
+  "completeness_score": 100.0,
+  "fluency_score":      100.0,
+  "prosody_score":      78.3,
+  "overall_score":      89.4,
+  "level": "excellent",
+  "feedback": "Excellent pronunciation! ...",
+  "results": {
+    "reference_ipa": "həloʊ wɝld",
+    "actual_ipa":    "həloʊ wɝld",
+    "overall_ipa_accuracy": 100.0,
+    "overall_gop_score":     85.0,
+    "word_details": [ /* ... per-word IPA + GOP breakdown ... */ ]
+  }
+}</code></pre>
+
+      <h3>Constraints (defaults)</h3>
+      <table>
+        <thead><tr><th>Constraint</th><th>Default</th><th>Override</th></tr></thead>
+        <tbody>
+          <tr><td>Max audio duration</td><td>30 s</td><td><code>AUDIO_MAX_DURATION_SEC</code></td></tr>
+          <tr><td>Max upload size</td><td>10 MB</td><td><em>compile-time constant</em></td></tr>
+          <tr><td>Sample rate (target)</td><td>16 kHz mono</td><td><code>AUDIO_SAMPLE_RATE</code></td></tr>
+          <tr><td>Per-request timeout</td><td>90 s</td><td><code>REQUEST_TIMEOUT_SEC</code></td></tr>
+          <tr><td>Concurrent inference slots</td><td>auto-detect (cap 4)</td><td><code>MAX_CONCURRENT_INFERENCES</code></td></tr>
+          <tr><td>Queue wait timeout (→ 503)</td><td>60 s</td><td><code>INFERENCE_QUEUE_TIMEOUT_SEC</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Supported audio formats</h3>
+      <p><code>audio/wav</code>, <code>audio/x-wav</code>, <code>audio/wave</code>,
+         <code>audio/flac</code>, <code>audio/mpeg</code>, <code>audio/mp3</code>,
+         <code>audio/ogg</code>, <code>audio/webm</code></p>
+    </section>
+
+    <!-- ── 3. PIPELINE ───────────────────────────────────────── -->
+    <section id="pipeline">
+      <h2>Architecture &amp; Pipeline</h2>
+
+      <p>One <code>POST /api/v1/evaluate</code> request triggers seven stages.
+      All inference runs in a single worker; concurrency is bound by an
+      <code>asyncio.Semaphore</code> (default 4 slots, queue overflow → 503).</p>
+
+      <div class="diagram-wrapper">
+        <svg viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg" role="img"
+             aria-label="Pronunciation evaluation pipeline diagram">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#5C5448"/>
+            </marker>
+            <style>
+              /* Lighter wash fills + full-ink text → stages still pop visually,
+                 sub text reads cleanly without bleeding into the wash colour. */
+              .box  { fill: #FAFAF7; stroke: #D8D2C4; stroke-width: 1.5; rx: 8; ry: 8; }
+              .stage{ fill: #FFEDD5; stroke: #C2410C; stroke-width: 1.5; rx: 8; ry: 8; }
+              .out  { fill: #ECFDF3; stroke: #15803D; stroke-width: 1.5; rx: 8; ry: 8; }
+              .label{ font: 600 13px 'IBM Plex Sans', sans-serif; fill: #1F1B17; letter-spacing: -0.005em; }
+              /* Sub text: full ink, slightly bolder, no opacity → max contrast. */
+              .sub  { font: 600 11px 'IBM Plex Sans', sans-serif; fill: #1F1B17; }
+              .arrow{ stroke: #5C5448; stroke-width: 1.5; fill: none; }
+            </style>
+          </defs>
+
+          <!-- Row 1: ingress -->
+          <rect class="box"   x="20"  y="20" width="160" height="56"/>
+          <text class="label" x="100" y="42" text-anchor="middle">Audio + Reference</text>
+          <text class="sub"   x="100" y="60" text-anchor="middle">multipart/form-data</text>
+
+          <line class="arrow" x1="180" y1="48" x2="220" y2="48" marker-end="url(#arrow)"/>
+
+          <rect class="box"   x="220" y="20" width="180" height="56"/>
+          <text class="label" x="310" y="42" text-anchor="middle">Validation Layer</text>
+          <text class="sub"   x="310" y="60" text-anchor="middle">size · mime · text · ffprobe</text>
+
+          <line class="arrow" x1="400" y1="48" x2="440" y2="48" marker-end="url(#arrow)"/>
+
+          <rect class="box"   x="440" y="20" width="180" height="56"/>
+          <text class="label" x="530" y="42" text-anchor="middle">Audio Decode</text>
+          <text class="sub"   x="530" y="60" text-anchor="middle">librosa @ 16 kHz mono</text>
+
+          <line class="arrow" x1="620" y1="48" x2="660" y2="48" marker-end="url(#arrow)"/>
+
+          <rect class="stage" x="660" y="20" width="200" height="56"/>
+          <text class="label" x="760" y="42" text-anchor="middle">ASR (Wav2Vec2)</text>
+          <text class="sub"   x="760" y="60" text-anchor="middle">transcription + CTC log-probs</text>
+
+          <!-- Drop down -->
+          <line class="arrow" x1="760" y1="76" x2="760" y2="120" marker-end="url(#arrow)"/>
+
+          <!-- Row 2: scoring fan-out -->
+          <rect class="stage" x="660" y="120" width="200" height="56"/>
+          <text class="label" x="760" y="142" text-anchor="middle">GOP Scoring</text>
+          <text class="sub"   x="760" y="160" text-anchor="middle">remainder-aware frames</text>
+
+          <rect class="stage" x="440" y="120" width="180" height="56"/>
+          <text class="label" x="530" y="142" text-anchor="middle">IPA Comparison</text>
+          <text class="sub"   x="530" y="160" text-anchor="middle">DP align + ε-tolerance</text>
+
+          <rect class="stage" x="220" y="120" width="180" height="56"/>
+          <text class="label" x="310" y="142" text-anchor="middle">Prosody Analysis</text>
+          <text class="sub"   x="310" y="160" text-anchor="middle">pitch · variance · rhythm</text>
+
+          <rect class="stage" x="20"  y="120" width="160" height="56"/>
+          <text class="label" x="100" y="142" text-anchor="middle">Fluency Analysis</text>
+          <text class="sub"   x="100" y="160" text-anchor="middle">rate · pause · word timing</text>
+
+          <!-- Connect ASR fan-out -->
+          <line class="arrow" x1="660" y1="148" x2="620" y2="148" marker-end="url(#arrow)"/>
+          <line class="arrow" x1="440" y1="148" x2="400" y2="148" marker-end="url(#arrow)"/>
+          <line class="arrow" x1="220" y1="148" x2="180" y2="148" marker-end="url(#arrow)"/>
+
+          <!-- Down to error classification -->
+          <line class="arrow" x1="100" y1="176" x2="100" y2="220" marker-end="url(#arrow)"/>
+
+          <!-- Row 3 -->
+          <rect class="box"   x="20"  y="220" width="380" height="56"/>
+          <text class="label" x="210" y="242" text-anchor="middle">Word-level Error Classification</text>
+          <text class="sub"   x="210" y="260" text-anchor="middle">None / Mispronunciation / Omission / Insertion / Break</text>
+
+          <line class="arrow" x1="400" y1="248" x2="440" y2="248" marker-end="url(#arrow)"/>
+
+          <rect class="box"   x="440" y="220" width="200" height="56"/>
+          <text class="label" x="540" y="242" text-anchor="middle">Sub-score Aggregation</text>
+          <text class="sub"   x="540" y="260" text-anchor="middle">accuracy · completeness · fluency · prosody</text>
+
+          <line class="arrow" x1="640" y1="248" x2="680" y2="248" marker-end="url(#arrow)"/>
+
+          <rect class="out"   x="680" y="220" width="180" height="56"/>
+          <text class="label" x="770" y="242" text-anchor="middle">Combined Score</text>
+          <text class="sub"   x="770" y="260" text-anchor="middle">Azure-style 0.4 · 0.2 · 0.2 · 0.2</text>
+
+          <!-- Final -->
+          <line class="arrow" x1="770" y1="276" x2="770" y2="320" marker-end="url(#arrow)"/>
+
+          <rect class="out"   x="680" y="320" width="180" height="32"/>
+          <text class="label" x="770" y="340" text-anchor="middle">JSON Response</text>
+        </svg>
+      </div>
+
+      <h3>Key invariants</h3>
+      <ul>
+        <li><strong>Single worker only</strong> — service crashes at import-time
+            if multi-worker is detected (1.2 GB model × N would OOM).</li>
+        <li><strong>Pre-decode duration check</strong> — ffprobe (or
+            <code>soundfile.info</code> for WAV/FLAC) rejects oversized audio
+            BEFORE the full PCM expansion.</li>
+        <li><strong>Concurrency cap</strong> — auto-detected via
+            <code>os.sched_getaffinity</code>, capped at 4 slots.</li>
+        <li><strong>503 on queue overflow</strong> — clients should retry with
+            backoff (see Errors section).</li>
+      </ul>
+
+      <h3>Compact text view</h3>
+<pre class="ascii">Audio + Ref ─▶ Validate ─▶ Decode ─▶ ASR ─┬─▶ GOP ──┐
+                                          ├─▶ IPA ──┤
+                                          ├─▶ Pros ─┼─▶ Combine ─▶ JSON
+                                          └─▶ Flu ──┘</pre>
+    </section>
+
+    <!-- ── 4. HOW SCORING WORKS ─────────────────────────────── -->
+    <section id="scoring">
+      <h2>How Scoring Works</h2>
+
+      <p>The previous section showed the engineering flow. This section
+      explains the <strong>algorithm</strong>: how the final 0-100 score is
+      derived from the ASR transcription.</p>
+
+      <p>Scoring runs four <strong>independent</strong> sub-scores from
+      different signals, then combines them with an Azure-style weighted
+      average that intentionally penalises the weakest dimension.</p>
+
+      <h3>High-level scoring flow</h3>
+
+      <div class="diagram-wrapper">
+        <svg viewBox="0 0 880 480" xmlns="http://www.w3.org/2000/svg" role="img"
+             aria-label="Scoring algorithm flow: 4 sub-scores combine into overall score">
+          <defs>
+            <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#5C5448"/>
+            </marker>
+            <style>
+              /* IMPORTANT: classes here are scoped per-svg by NAMING.
+                 Earlier `.sub` collision with engineering pipeline SVG caused
+                 sub text to render with orange stroke + light-orange fill
+                 (looked "red" everywhere). Renamed `.sub` → `.score-sub`. */
+              .b1        { fill: #FAFAF7; stroke: #D8D2C4; stroke-width: 1.5; rx: 8; ry: 8; }
+              .sig       { fill: #FEF6E0; stroke: #A16207; stroke-width: 1.5; rx: 8; ry: 8; }
+              .score-sub { fill: #FFEDD5; stroke: #C2410C; stroke-width: 2;   rx: 8; ry: 8; }
+              .res       { fill: #ECFDF3; stroke: #15803D; stroke-width: 2;   rx: 8; ry: 8; }
+              .lvl       { fill: #F2EFE8; stroke: #5C5448; stroke-width: 1.5; rx: 8; ry: 8; }
+              .lab       { font: 600 13px 'IBM Plex Sans', sans-serif; fill: #1F1B17; letter-spacing: -0.005em; }
+              .smol      { font: 600 11px 'IBM Plex Sans', sans-serif; fill: #1F1B17; }
+              .form      { font: 600 11px 'IBM Plex Mono', monospace; fill: #7C2D12; }
+              .arr       { stroke: #5C5448; stroke-width: 1.5; fill: none; }
+            </style>
+          </defs>
+
+          <!-- Top: input -->
+          <rect class="b1" x="280" y="10" width="320" height="44"/>
+          <text class="lab" x="440" y="32" text-anchor="middle">ASR transcription + Reference text</text>
+          <text class="smol" x="440" y="48" text-anchor="middle">(produced by Wav2Vec2)</text>
+
+          <!-- Fan out arrows -->
+          <line class="arr" x1="440" y1="54"  x2="100" y2="80"  marker-end="url(#arrow2)"/>
+          <line class="arr" x1="440" y1="54"  x2="320" y2="80"  marker-end="url(#arrow2)"/>
+          <line class="arr" x1="440" y1="54"  x2="540" y2="80"  marker-end="url(#arrow2)"/>
+          <line class="arr" x1="440" y1="54"  x2="760" y2="80"  marker-end="url(#arrow2)"/>
+
+          <!-- Row 1: signal sources -->
+          <rect class="sig" x="20"  y="80" width="180" height="56"/>
+          <text class="lab" x="110" y="102" text-anchor="middle">IPA + GOP signals</text>
+          <text class="smol" x="110" y="120" text-anchor="middle">phoneme align +</text>
+          <text class="smol" x="110" y="132" text-anchor="middle">CTC log-prob</text>
+
+          <rect class="sig" x="240" y="80" width="160" height="56"/>
+          <text class="lab" x="320" y="102" text-anchor="middle">Word match</text>
+          <text class="smol" x="320" y="120" text-anchor="middle">attempted &amp; ≥60%</text>
+          <text class="smol" x="320" y="132" text-anchor="middle">accuracy</text>
+
+          <rect class="sig" x="440" y="80" width="200" height="56"/>
+          <text class="lab" x="540" y="102" text-anchor="middle">Pitch + rhythm</text>
+          <text class="smol" x="540" y="120" text-anchor="middle">variance · range ·</text>
+          <text class="smol" x="540" y="132" text-anchor="middle">contour · nPVI</text>
+
+          <rect class="sig" x="680" y="80" width="160" height="56"/>
+          <text class="lab" x="760" y="102" text-anchor="middle">Word timing</text>
+          <text class="smol" x="760" y="120" text-anchor="middle">forced-align</text>
+          <text class="smol" x="760" y="132" text-anchor="middle">+ pause gaps</text>
+
+          <!-- Vertical arrows down -->
+          <line class="arr" x1="110" y1="136" x2="110" y2="170" marker-end="url(#arrow2)"/>
+          <line class="arr" x1="320" y1="136" x2="320" y2="170" marker-end="url(#arrow2)"/>
+          <line class="arr" x1="540" y1="136" x2="540" y2="170" marker-end="url(#arrow2)"/>
+          <line class="arr" x1="760" y1="136" x2="760" y2="170" marker-end="url(#arrow2)"/>
+
+          <!-- Row 2: sub-scores (rect class renamed from .sub → .score-sub
+               to avoid global-scope collision with engineering pipeline SVG) -->
+          <rect class="score-sub" x="20"  y="170" width="180" height="80"/>
+          <text class="lab"  x="110" y="192" text-anchor="middle">ACCURACY</text>
+          <text class="smol" x="110" y="210" text-anchor="middle">per-phoneme correctness</text>
+          <text class="form" x="110" y="232" text-anchor="middle">0.55·IPA + 0.45·GOP</text>
+
+          <rect class="score-sub" x="240" y="170" width="160" height="80"/>
+          <text class="lab"  x="320" y="192" text-anchor="middle">COMPLETENESS</text>
+          <text class="smol" x="320" y="210" text-anchor="middle">word coverage</text>
+          <text class="form" x="320" y="232" text-anchor="middle">correct / total × 100</text>
+
+          <rect class="score-sub" x="440" y="170" width="200" height="80"/>
+          <text class="lab"  x="540" y="192" text-anchor="middle">PROSODY</text>
+          <text class="smol" x="540" y="210" text-anchor="middle">intonation naturalness</text>
+          <text class="form" x="540" y="232" text-anchor="middle">.55·Int + .20·Spd + .25·Rhy</text>
+
+          <rect class="score-sub" x="680" y="170" width="160" height="80"/>
+          <text class="lab"  x="760" y="192" text-anchor="middle">FLUENCY</text>
+          <text class="smol" x="760" y="210" text-anchor="middle">pause + rate</text>
+          <text class="form" x="760" y="232" text-anchor="middle">0.4·Rate + 0.6·Pause</text>
+
+          <!-- Converge arrows -->
+          <line class="arr" x1="110" y1="250" x2="380" y2="295" marker-end="url(#arrow2)"/>
+          <line class="arr" x1="320" y1="250" x2="410" y2="295" marker-end="url(#arrow2)"/>
+          <line class="arr" x1="540" y1="250" x2="450" y2="295" marker-end="url(#arrow2)"/>
+          <line class="arr" x1="760" y1="250" x2="480" y2="295" marker-end="url(#arrow2)"/>
+
+          <!-- Sort step -->
+          <rect class="b1" x="270" y="295" width="340" height="44"/>
+          <text class="lab"  x="440" y="316" text-anchor="middle">Sort ascending → s₀ ≤ s₁ ≤ s₂ ≤ s₃</text>
+          <text class="smol" x="440" y="332" text-anchor="middle">(weakest first)</text>
+
+          <line class="arr" x1="440" y1="339" x2="440" y2="365" marker-end="url(#arrow2)"/>
+
+          <!-- Combined formula -->
+          <rect class="res" x="220" y="365" width="440" height="56"/>
+          <text class="lab"  x="440" y="388" text-anchor="middle">OVERALL SCORE</text>
+          <text class="form" x="440" y="408" text-anchor="middle">0.4·s₀ + 0.2·s₁ + 0.2·s₂ + 0.2·s₃</text>
+
+          <line class="arr" x1="440" y1="421" x2="440" y2="445" marker-end="url(#arrow2)"/>
+
+          <!-- Levels -->
+          <rect class="lvl" x="120" y="445" width="640" height="32"/>
+          <text class="smol" x="200" y="465" text-anchor="middle"><tspan font-weight="700">POOR</tspan> 0–39</text>
+          <text class="smol" x="360" y="465" text-anchor="middle"><tspan font-weight="700">FAIR</tspan> 40–59</text>
+          <text class="smol" x="520" y="465" text-anchor="middle"><tspan font-weight="700">GOOD</tspan> 60–79</text>
+          <text class="smol" x="680" y="465" text-anchor="middle"><tspan font-weight="700">EXCELLENT</tspan> 80–100</text>
+        </svg>
+      </div>
+
+      <h3>Sub-score formulas (compact reference)</h3>
+      <table>
+        <thead>
+          <tr><th>Sub-score</th><th>Formula</th><th>Signal source</th><th>Range</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Accuracy</strong></td>
+            <td><code>0.55·IPA + 0.45·GOP</code></td>
+            <td>per-phoneme correctness + CTC log-prob</td>
+            <td>0–100</td>
+          </tr>
+          <tr>
+            <td><strong>Completeness</strong></td>
+            <td><code>correct_words / total_ref_words × 100</code></td>
+            <td>word-level alignment + ≥60% accuracy threshold</td>
+            <td>0–100</td>
+          </tr>
+          <tr>
+            <td><strong>Fluency</strong></td>
+            <td><code>0.4·RateScore + 0.6·PauseScore</code></td>
+            <td>speech rate + inter-word pause analysis</td>
+            <td>0–100</td>
+          </tr>
+          <tr>
+            <td><strong>Prosody</strong></td>
+            <td><code>0.55·Intonation + 0.20·Speed + 0.25·Rhythm</code></td>
+            <td>pitch variance/range/contour + nPVI</td>
+            <td>0–100</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Why the sort? Azure-style weighting</h3>
+
+      <p>Sub-scores are sorted ascending then weighted asymmetrically: the
+      lowest gets <strong>40%</strong>, the other three split the remaining
+      <strong>60%</strong> (20% each). This intentionally
+      <strong>penalises the weakest dimension most heavily</strong> — a user
+      with great accuracy but monotone prosody can't hide behind the strong
+      sub-scores. The formula matches Azure Speech SDK's PronScore behaviour.</p>
+
+      <div class="callout">
+        <strong>Why sort, not average?</strong>
+        A simple average treats all sub-scores equally and lets a strong one
+        compensate for a weak one. The sorted formula reflects how a human
+        listener perceives speech: the worst dimension dominates the
+        impression.
+      </div>
+
+      <h3>Quality levels</h3>
+      <table>
+        <thead><tr><th>Score range</th><th>Level</th><th>Feedback</th></tr></thead>
+        <tbody>
+          <tr><td><strong>80 – 100</strong></td><td><span class="level-pip excellent" aria-hidden="true"></span>Excellent</td><td>Speech closely matches the reference</td></tr>
+          <tr><td><strong>60 – 79</strong></td><td><span class="level-pip good" aria-hidden="true"></span>Good</td><td>Minor improvements could be made</td></tr>
+          <tr><td><strong>40 – 59</strong></td><td><span class="level-pip fair" aria-hidden="true"></span>Fair</td><td>Several sounds need practice</td></tr>
+          <tr><td><strong>0 – 39</strong></td><td><span class="level-pip poor" aria-hidden="true"></span>Poor</td><td>Significant improvement needed</td></tr>
+        </tbody>
+      </table>
+
+      <details>
+        <summary>
+          Detailed numeric example — <em>"hello world"</em> → <em>"hallo world"</em>
+        </summary>
+
+        <p style="margin-top:14px;">User reads <em>"hello world"</em>; ASR transcribes <em>"hallo world"</em>
+        (1 vowel substitution: <code>ɛ → æ</code> in the first word).</p>
+
+        <h4 style="margin:18px 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-2);">Step 1 — Per-word IPA alignment</h4>
+<pre><code>"hello":  ref [h, ɛ, l, oʊ]    actual [h, æ, l, oʊ]
+          h=h ✓  ɛ→æ (different group, conf=0.0)  l=l ✓  oʊ=oʊ ✓
+          → 3/4 correct = 75%
+
+"world":  ref [w, ɝ, l, d]     actual [w, ɝ, l, d]
+          all match
+          → 4/4 correct = 100%
+
+Overall IPA accuracy = 7/8 = 87.5%</code></pre>
+
+        <h4 style="margin:18px 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-2);">Step 2 — GOP scoring (CTC log-prob normalised)</h4>
+<pre><code>For each phoneme: average log-prob over its frames,
+  clamp to [-25, -3], linear remap to [0, 100].
+
+  Per-phoneme GOP scores (example):
+    h=59.3  ɛ=68.5  l=72.0  oʊ=62.9
+    w=63.9  ɝ=73.6  l=50.6  d=43.7
+
+  Overall GOP = mean = 61.81</code></pre>
+
+        <h4 style="margin:18px 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-2);">Step 3 — Compute the four sub-scores</h4>
+<pre><code>Accuracy     = 0.55 × 87.5  + 0.45 × 61.81  = 48.13 + 27.81  = 75.94
+Completeness = 2 / 2 × 100  (both words attempted ≥60%)        = 100.00
+Fluency      = 0.4 × Rate(95.0) + 0.6 × Pause(91.0)            =  92.60
+Prosody      = 0.55·Int(80) + 0.20·Spd(75) + 0.25·Rhythm(75)   =  77.75</code></pre>
+
+        <h4 style="margin:18px 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-2);">Step 4 — Sort ascending and combine</h4>
+<pre><code>Sub-scores: [Accuracy=75.94, Completeness=100, Fluency=92.60, Prosody=77.75]
+Sorted:     [s₀=75.94, s₁=77.75, s₂=92.60, s₃=100.00]
+
+Overall = 0.4 × 75.94 + 0.2 × 77.75 + 0.2 × 92.60 + 0.2 × 100.00
+        = 30.376    + 15.550     + 18.520     + 20.000
+        = 84.45
+
+Level: EXCELLENT (≥ 80)  ✓</code></pre>
+
+        <p style="margin-top:14px; color:var(--text-2); font-size:13px;">
+          Note: <code>s₀ = Accuracy = 75.94</code> got the 40% weight — even
+          though Accuracy is the lowest sub-score, the user's overall
+          impression remains EXCELLENT because all other dimensions are strong.
+          A user with the same Accuracy but Prosody = 35 would land at FAIR
+          instead, since Prosody = 35 would become s₀.
+        </p>
+      </details>
+
+      <div class="callout warning" style="margin-top:24px;">
+        <strong>Source of truth</strong>
+        Numeric example values mirror <code>README.md</code>'s scoring
+        example. For implementation details see
+        <code>app/services/pronunciation_service.py</code>; for constants
+        rationale see <code>docs/scoring-constants.md</code>.
+      </div>
+    </section>
+
+    <!-- ── 5. API REFERENCE ─────────────────────────────────── -->
+    <section id="api-reference">
+      <h2>API Reference</h2>
+
+      <p>All endpoints live under <code>/api/v1/*</code> except <code>/health</code>.
+      Protected endpoints require <code>X-API-Key</code>. JSON responses unless
+      stated otherwise.</p>
+
+      <!-- /evaluate -->
+      <div class="endpoint" id="ep-evaluate">
+        <div class="endpoint-head">
+          <span class="method post">POST</span>
+          <span class="path">/api/v1/evaluate</span>
+          <span class="auth required">API key required</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Score a recording against a reference. Main endpoint.</p>
+
+          <h4>Request (multipart/form-data)</h4>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>audio</code></td><td>file</td>
+                <td>16 kHz mono preferred; auto-resampled. ≤ 10 MB, ≤ 30 s.</td></tr>
+              <tr><td><code>reference_text</code></td><td>string</td>
+                <td>≤ 500 chars, ≤ 100 words, no Unicode control chars.</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200)</h4>
+          <pre><code>{
+  "reference_text": "hello world",
+  "transcribed_text": "hallo world",
+  "accuracy_score":     75.94,
+  "completeness_score": 100.0,
+  "fluency_score":       92.5,
+  "prosody_score":       78.3,
+  "overall_score":       82.1,
+  "level": "excellent",
+  "feedback": "Excellent pronunciation! ...",
+  "results": {
+    "reference_ipa": "həloʊ wɝld",
+    "actual_ipa":    "hɔloʊ wɝld",
+    "overall_ipa_accuracy": 87.5,
+    "overall_gop_score":     61.81,
+    "overall_gop_quality":   "good",
+    "word_details": [
+      { "word": "hello",
+        "expected_ipa": "həloʊ", "actual_ipa": "hɔloʊ",
+        "ipa_accuracy": 75, "word_gop_score": 65.67,
+        "word_gop_quality": "good", "error_type": "Mispronunciation",
+        "phoneme_details": [ /* per-phoneme: expected, actual, gop, ... */ ] }
+    ]
+  }
+}</code></pre>
+
+          <h4>Errors</h4>
+          <table>
+            <thead><tr><th>Code</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td><span class="status s4xx">400</span></td><td>audio empty / oversized / unsupported MIME / decode failed</td></tr>
+              <tr><td><span class="status s4xx">401</span></td><td>missing X-API-Key (when API_KEY is set)</td></tr>
+              <tr><td><span class="status s4xx">403</span></td><td>X-API-Key value mismatch</td></tr>
+              <tr><td><span class="status s4xx">422</span></td><td>reference_text rejected (length / control chars)</td></tr>
+              <tr><td><span class="status s4xx">429</span></td><td>rate limit exceeded for this key</td></tr>
+              <tr><td><span class="status s5xx">500</span></td><td>internal error</td></tr>
+              <tr><td><span class="status s5xx">503</span></td><td>inference queue full — retry with backoff</td></tr>
+              <tr><td><span class="status s5xx">504</span></td><td>request exceeded 90 s timeout</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- /transcribe -->
+      <div class="endpoint" id="ep-transcribe">
+        <div class="endpoint-head">
+          <span class="method post">POST</span>
+          <span class="path">/api/v1/transcribe</span>
+          <span class="auth required">API key required</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Transcription only — no scoring. Same Wav2Vec2 model.</p>
+
+          <h4>Request (multipart/form-data)</h4>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>audio</code></td><td>file</td>
+                <td>Same constraints as <code>/evaluate</code>.</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200)</h4>
+          <pre><code>{ "transcription": "hello world", "duration_sec": 2.35 }</code></pre>
+
+          <h4>Errors</h4>
+          <p>Same matrix as <code>/evaluate</code>, except no <span class="status s4xx">422</span> (no <code>reference_text</code>).</p>
+        </div>
+      </div>
+
+      <!-- /text-analysis -->
+      <div class="endpoint" id="ep-text-analysis">
+        <div class="endpoint-head">
+          <span class="method get">GET</span>
+          <span class="path">/api/v1/text-analysis?text=...</span>
+          <span class="auth required">API key required</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Convert English text to IPA with per-word phoneme breakdown. No
+          audio required. Useful for previewing the reference before evaluation.</p>
+
+          <h4>Query params</h4>
+          <table>
+            <thead><tr><th>Param</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>text</code></td><td>string</td>
+                <td>1–500 chars; same validation as <code>reference_text</code>.</td></tr>
+            </tbody>
+          </table>
+
+          <h4>Response (200)</h4>
+          <pre><code>{
+  "text": "hello world",
+  "ipa":  "hɛloʊ wɝld",
+  "words": [
+    { "word": "hello", "ipa": "hɛloʊ", "phonemes": ["h","ɛ","l","oʊ"] },
+    { "word": "world", "ipa": "wɝld",  "phonemes": ["w","ɝ","l","d"] }
+  ]
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- /model-info -->
+      <div class="endpoint" id="ep-model-info">
+        <div class="endpoint-head">
+          <span class="method get">GET</span>
+          <span class="path">/api/v1/model-info</span>
+          <span class="auth">public</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Service metadata + capability list. Useful for client-side UI
+          rendering of supported formats / limits without hard-coding them.</p>
+
+          <h4>Response (200)</h4>
+          <pre><code>{
+  "app_name": "Pronunciation Validator",
+  "app_version": "1.0.0",
+  "asr_model":   "facebook/wav2vec2-base-960h",
+  "device":      "cpu",
+  "sample_rate":      16000,
+  "max_duration_sec": 30,
+  "max_upload_mb":    10,
+  "supported_formats": ["audio/flac","audio/mp3","audio/mpeg","audio/ogg",
+                        "audio/wav","audio/wave","audio/webm","audio/x-wav"]
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- /health -->
+      <div class="endpoint" id="ep-health">
+        <div class="endpoint-head">
+          <span class="method get">GET</span>
+          <span class="path">/health</span>
+          <span class="auth">public</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Liveness probe. Returns service + model status. Used by Coolify
+          health checks (120 s timeout configured).</p>
+
+          <h4>Response (200)</h4>
+          <pre><code>{ "status": "ok", "model_loaded": true }</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 5. AUTH & INTERNAL MODE ──────────────────────────── -->
+    <section id="auth">
+      <h2>Authentication &amp; Internal Microservice Mode</h2>
+
+      <h3>Standard auth — X-API-Key</h3>
+      <p>Every protected endpoint requires <code>X-API-Key</code>. Generate a
+      strong key:</p>
+      <pre><code>python -c "import secrets; print(secrets.token_urlsafe(32))"</code></pre>
+
+      <table>
+        <thead><tr><th>Behaviour</th><th>Condition</th></tr></thead>
+        <tbody>
+          <tr><td>Auth disabled</td><td><code>API_KEY</code> env var is empty (dev only — server logs warning at startup)</td></tr>
+          <tr><td><span class="status s4xx">401</span></td><td>Header missing when <code>API_KEY</code> is set</td></tr>
+          <tr><td><span class="status s4xx">403</span></td><td>Header present but value mismatch</td></tr>
+          <tr><td><span class="status s2xx">200</span></td><td>Header matches</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout warning">
+        <strong>Production guard</strong>
+        With <code>DEBUG=false</code>, startup fails immediately if
+        <code>API_KEY</code> is empty, &lt; 32 chars, or matches a known weak
+        placeholder (e.g. <code>change-me</code>, <code>test</code>).
+      </div>
+
+      <h3>Internal Microservice Mode (per-user rate limit)</h3>
+
+      <p>By default the service rate-limits per source IP. When you call it
+      from your own backend, all your users share that one IP — 1000 users
+      would burn a single quota.</p>
+
+      <p>Per-user keying lets the service rate-limit on the real end-user you
+      forward in a header. Each user gets their own quota; one spammy user
+      doesn't affect the others.</p>
+
+      <h4>Headers contract</h4>
+      <table>
+        <thead><tr><th>Header</th><th>Required when</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>X-API-Key</code></td><td>Always</td><td>Service-level auth (existing)</td></tr>
+          <tr><td><code>X-Service-Auth</code></td><td>You want per-user keying</td>
+              <td>Must match <code>SERVICE_API_KEY</code> env</td></tr>
+          <tr><td><code>X-End-User-Id</code></td><td>You sent <code>X-Service-Auth</code></td>
+              <td>The end-user this request is for</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Decision table — what becomes the rate-limit key</h4>
+      <table>
+        <thead>
+          <tr><th>Direct TCP peer</th><th>Service auth match</th>
+              <th>Valid <code>X-End-User-Id</code></th><th>Resulting key</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Untrusted CIDR</td><td>(any)</td><td>(any)</td><td><code>ip:&lt;peer&gt;</code></td></tr>
+          <tr><td>Trusted CIDR</td><td>No</td><td>(any)</td><td><code>ip:&lt;peer&gt;</code></td></tr>
+          <tr><td>Trusted CIDR</td><td>Yes</td><td>No</td><td><code>ip:&lt;peer&gt;</code></td></tr>
+          <tr><td>Trusted CIDR</td><td>Yes</td><td>Yes</td><td><code>user:&lt;id&gt;</code> ✓</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout success">
+        <strong>Spoof-safe by design</strong>
+        Trust gate uses the <strong>direct TCP peer</strong>, not the
+        XFF-resolved address. An attacker on <code>1.2.3.4</code> cannot
+        forge <code>X-Forwarded-For: 172.17.0.5</code> to bypass the check.
+      </div>
+
+      <h4>Anonymous users</h4>
+      <p>For users who haven't logged in (trial / demo widget):</p>
+      <pre><code>X-End-User-Id: anon-&lt;session-uuid&gt;</code></pre>
+      <p>Generate the UUID client-side, store in <code>localStorage</code>, one
+      per browser tab.</p>
+
+      <h4>TypeScript wrapper (with retry-backoff)</h4>
+<pre><code>const SERVICE_URL   = process.env.PRONUNCIATION_URL!;
+const API_KEY       = process.env.PRONUNCIATION_API_KEY!;
+const SERVICE_AUTH  = process.env.PRONUNCIATION_SERVICE_AUTH!;
+
+export async function evaluatePronunciation(
+  audio: Blob, referenceText: string, userId: string
+) {
+  const headers = {
+    "X-API-Key":      API_KEY,
+    "X-Service-Auth": SERVICE_AUTH,
+    "X-End-User-Id":  userId,
+  };
+  const body = new FormData();
+  body.append("audio", audio, "audio.wav");
+  body.append("reference_text", referenceText);
+
+  for (let attempt = 0; attempt &lt; 3; attempt++) {
+    const r = await fetch(`${SERVICE_URL}/api/v1/evaluate`,
+                          { method: "POST", headers, body });
+    if (r.status === 503) {                 // queue full — retry
+      const ra = Number(r.headers.get("retry-after") ?? "1");
+      await new Promise(res =&gt; setTimeout(res,
+        Math.min(2 ** attempt * 1000, ra * 1000)));
+      continue;
+    }
+    if (r.status === 429) throw new Error("End-user quota exceeded");
+    if (!r.ok) throw new Error(`Service ${r.status}: ${await r.text()}`);
+    return r.json();
+  }
+  throw new Error("Service unavailable after 3 retries");
+}</code></pre>
+
+      <h4>Python wrapper</h4>
+<pre><code>import asyncio, os, httpx
+
+URL          = os.environ["PRONUNCIATION_URL"]
+API_KEY      = os.environ["PRONUNCIATION_API_KEY"]
+SERVICE_AUTH = os.environ["PRONUNCIATION_SERVICE_AUTH"]
+
+async def evaluate(audio: bytes, reference_text: str, user_id: str) -&gt; dict:
+    headers = {
+        "X-API-Key":      API_KEY,
+        "X-Service-Auth": SERVICE_AUTH,
+        "X-End-User-Id":  user_id,
+    }
+    files = {"audio": ("audio.wav", audio, "audio/wav")}
+    data  = {"reference_text": reference_text}
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        for attempt in range(3):
+            r = await client.post(f"{URL}/api/v1/evaluate",
+                                  headers=headers, files=files, data=data)
+            if r.status_code == 503:
+                ra = int(r.headers.get("retry-after", "1"))
+                await asyncio.sleep(min(2 ** attempt, ra))
+                continue
+            if r.status_code == 429:
+                raise RuntimeError("End-user quota exceeded")
+            r.raise_for_status()
+            return r.json()
+    raise RuntimeError("Service unavailable after 3 retries")</code></pre>
+
+      <h4>Default rate limits</h4>
+      <table>
+        <thead><tr><th>Endpoint</th><th>Per key/min</th><th>Env var</th></tr></thead>
+        <tbody>
+          <tr><td><code>/evaluate</code></td><td>20</td><td><code>RATE_LIMIT_EVALUATE_PER_MINUTE</code></td></tr>
+          <tr><td><code>/transcribe</code></td><td>15</td><td><code>RATE_LIMIT_TRANSCRIBE_PER_MINUTE</code></td></tr>
+          <tr><td><code>/text-analysis</code></td><td>120</td><td><code>RATE_LIMIT_TEXT_ANALYSIS_PER_MINUTE</code></td></tr>
+        </tbody>
+      </table>
+
+      <p>Limit applies <em>per key</em>: when keyed by IP, all users behind
+      that IP share the cap; when keyed by <code>user:&lt;id&gt;</code>, each
+      end-user has their own.</p>
+
+      <p>See <code>docs/internal-integration.md</code> in the source repo for
+      the operational notes (secret storage, key rotation, service-mesh
+      caveats, narrow-CIDR setup).</p>
+    </section>
+
+    <!-- ── 6. ERRORS & RETRY ────────────────────────────────── -->
+    <section id="errors">
+      <h2>Error Handling &amp; Retry</h2>
+
+      <p>Every error response has the same envelope:</p>
+      <pre><code>{ "detail": "&lt;human-readable message&gt;",
+  "error_code": "&lt;machine code&gt;" }</code></pre>
+
+      <h3>Status matrix</h3>
+      <table>
+        <thead><tr><th>Code</th><th>Meaning</th><th>Recommended client action</th></tr></thead>
+        <tbody>
+          <tr><td><span class="status s2xx">200</span></td><td>OK</td><td>Use response body</td></tr>
+          <tr><td><span class="status s4xx">400</span></td><td>Bad audio (empty / oversized / wrong format / decode failed)</td><td>Surface to user; suggest re-record</td></tr>
+          <tr><td><span class="status s4xx">401</span> / <span class="status s4xx">403</span></td><td>API key issue</td><td>Page on-call; config bug, not user error</td></tr>
+          <tr><td><span class="status s4xx">422</span></td><td><code>reference_text</code> rejected</td><td>Surface to user (length / invalid chars)</td></tr>
+          <tr><td><span class="status s4xx">429</span></td><td>Rate limit exceeded for this key</td><td>Surface; throttle UI; <strong>do not auto-retry</strong></td></tr>
+          <tr><td><span class="status s5xx">500</span></td><td>Internal error</td><td>Retry once; if persists, generic error</td></tr>
+          <tr><td><span class="status s5xx">503</span></td><td>Inference queue full</td><td>Retry with exponential backoff (1 s, 2 s, 4 s, max 3)</td></tr>
+          <tr><td><span class="status s5xx">504</span></td><td>Request timeout (&gt; 90 s)</td><td>Retry with smaller audio chunk</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout warning">
+        <strong>Don't auto-retry 429</strong>
+        429 means the user (or the BE keyed by IP) has burned their quota.
+        Auto-retrying just confirms the cap and burns more time. Surface
+        the error and let the user wait it out, or upgrade their tier.
+      </div>
+
+      <h3>Retry-backoff pattern</h3>
+      <p>503 carries <code>Retry-After</code> in seconds. Use it as an upper
+      bound, but apply exponential backoff for the lower bound:</p>
+<pre><code>delay_seconds = min(2 ** attempt, int(retry_after_header))
+# attempt: 0 → 1 s, 1 → 2 s, 2 → 4 s; max 3 attempts</code></pre>
+
+      <p>Real wrappers shown in the
+        <a href="#auth">Authentication &amp; Internal Mode</a> section.</p>
+
+      <h3>Common pitfalls</h3>
+      <ul>
+        <li><strong>"Could not determine audio duration"</strong> — usually
+            ffmpeg/ffprobe missing on the server. Install the system package
+            or rely on <code>imageio-ffmpeg</code>.</li>
+        <li><strong>Permanent 429 in production</strong> — you're keying by IP.
+            Enable <a href="#auth">Internal Microservice Mode</a> and forward
+            <code>X-End-User-Id</code>.</li>
+        <li><strong>504 on perfectly normal audio</strong> — likely
+            CPU-starved container or model not warmed up. Send 1 dummy
+            request after deploy.</li>
+      </ul>
+    </section>
+
+    <!-- ── 7. DEPLOYMENT ────────────────────────────────────── -->
+    <section id="deploy">
+      <h2>Deployment</h2>
+
+      <p>Service ships two build paths in sync:</p>
+      <ul>
+        <li><strong>Coolify (production)</strong> — Nixpacks via
+          <code>nixpacks.toml</code>, runs as non-root <code>appuser</code>.</li>
+        <li><strong>Docker (local / fallback)</strong> — multi-stage Python 3.11
+          slim image with model baked at build time.</li>
+      </ul>
+
+      <h3>System requirements</h3>
+      <table>
+        <thead><tr><th>Resource</th><th>Minimum</th><th>Recommended</th></tr></thead>
+        <tbody>
+          <tr><td>CPU</td><td>2 vCPU</td><td>4 vCPU</td></tr>
+          <tr><td>RAM</td><td>1.5 GB (base model)</td><td>3 GB (large model)</td></tr>
+          <tr><td>Disk</td><td>500 MB (image + model cache)</td><td>2 GB</td></tr>
+          <tr><td>System packages</td><td><code>ffmpeg</code>, <code>libsndfile1</code>, <code>util-linux</code> (for prlimit)</td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Environment variables (reference)</h3>
+      <table>
+        <thead><tr><th>Variable</th><th>Default</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>API_KEY</code></td><td><em>(empty)</em></td><td>Set to enable auth. ≥ 32 chars in prod.</td></tr>
+          <tr><td><code>SERVICE_API_KEY</code></td><td><em>(empty)</em></td><td>Enables per-user keying for trusted backends.</td></tr>
+          <tr><td><code>TRUSTED_PROXY_CIDRS_STR</code></td><td>RFC1918 ranges</td><td>Comma-separated CIDRs whose XFF is trusted.</td></tr>
+          <tr><td><code>RATE_LIMIT_ENABLED</code></td><td><code>true</code></td><td>Master switch.</td></tr>
+          <tr><td><code>RATE_LIMIT_EVALUATE_PER_MINUTE</code></td><td><code>20</code></td><td>Per-key cap for /evaluate.</td></tr>
+          <tr><td><code>REQUEST_TIMEOUT_SEC</code></td><td><code>90</code></td><td>Hard timeout per request → 504.</td></tr>
+          <tr><td><code>MAX_CONCURRENT_INFERENCES</code></td><td><code>0</code> (auto)</td><td>0 = sched_getaffinity, capped 4.</td></tr>
+          <tr><td><code>INFERENCE_QUEUE_TIMEOUT_SEC</code></td><td><code>60</code></td><td>Queue wait → 503 after this.</td></tr>
+          <tr><td><code>AUDIO_MAX_DURATION_SEC</code></td><td><code>30</code></td><td>Pre-decode duration cap.</td></tr>
+          <tr><td><code>ASR_MODEL_NAME</code></td><td><code>facebook/wav2vec2-base-960h</code></td><td>HuggingFace model id.</td></tr>
+          <tr><td><code>INFERENCE_BACKEND</code></td><td><code>torch_fp32</code></td><td>Or <code>torch_int8</code> after sanity gate.</td></tr>
+          <tr><td><code>DEBUG</code></td><td><code>false</code></td><td>true = text logs, false = JSON logs.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Coolify quick deploy</h3>
+      <ol>
+        <li>Push repo to GitHub / GitLab.</li>
+        <li>Coolify → New service → Public repo → select branch.</li>
+        <li>Build pack: <code>Nixpacks</code> (auto-detected from
+          <code>nixpacks.toml</code>).</li>
+        <li>Set env vars from the table above (minimum: <code>API_KEY</code>).</li>
+        <li>Health check: <code>GET /health</code>, port 8000, 120 s timeout.</li>
+        <li>Set <code>--timeout-graceful-shutdown=70</code> (must exceed
+          queue-timeout 60 s + max inference time).</li>
+        <li>Deploy. Watch logs for "All models loaded ✓".</li>
+      </ol>
+
+      <h3>Docker quick deploy</h3>
+      <pre><code>docker build -t pronunciation-service .
+docker run -d \
+  -p 8000:8000 \
+  -e API_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')" \
+  --name pronun \
+  pronunciation-service</code></pre>
+
+      <h3>Verification after deploy</h3>
+<pre><code>docker exec pronun whoami            # → appuser (non-root)
+docker exec pronun which ffprobe     # → /usr/bin/ffprobe
+curl http://localhost:8000/health    # → {"status":"ok","model_loaded":true}
+curl http://localhost:8000/api/v1/model-info | jq</code></pre>
+
+      <div class="callout">
+        <strong>Single-worker constraint</strong>
+        Each worker loads ~1.2 GB (base) or ~2.5 GB (large) of model state.
+        Scale by adding <em>containers</em>, not workers. The service crashes
+        at import-time if it detects multiple workers configured.
+      </div>
+
+      <h3>Operational logs</h3>
+      <p>Production logs are JSON one-line-per-record (loguru
+      <code>serialize=True</code>). Each request emits one
+      <code>request_completed</code> entry:</p>
+      <pre><code>{ "request_id": "&lt;uuid&gt;",
+  "endpoint":   "/api/v1/evaluate",
+  "method":     "POST",
+  "status":     200,
+  "latency_ms": 234.5,
+  "client_ip":  "ip:172.17.0.5" }</code></pre>
+      <p>Tail via <code>docker logs -f pronun | jq</code>. The
+      <code>request_id</code> is server-generated; the
+      <code>X-Request-ID</code> request header is intentionally ignored to
+      prevent log injection.</p>
+    </section>
+
+    <footer style="margin-top:48px; padding-top:24px; border-top:1px solid var(--border); color:var(--text-3); font-size:13px;">
+      <p>Pronunciation Validation Service — single-page developer docs.</p>
+      <p>Source of truth: <code>README.md</code> and <code>docs/*.md</code> in
+         the project repository. When those change, sync this file.</p>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+  // ── Mobile drawer ─────────────────────────────────────
+  (function () {
+    var btn      = document.getElementById('menuBtn');
+    var sidebar  = document.getElementById('sidebar');
+    var backdrop = document.getElementById('backdrop');
+    if (!btn || !sidebar || !backdrop) return;
+
+    function open()  { sidebar.classList.add('open');    backdrop.classList.add('show'); }
+    function close() { sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+
+    btn.addEventListener('click', function () {
+      sidebar.classList.contains('open') ? close() : open();
+    });
+    backdrop.addEventListener('click', close);
+    sidebar.addEventListener('click', function (e) {
+      // Close drawer when an anchor is clicked on mobile.
+      if (e.target.tagName === 'A') close();
+    });
+  })();
+
+  // ── Active section highlight via IntersectionObserver ─
+  (function () {
+    if (!('IntersectionObserver' in window)) return;
+    var sections = document.querySelectorAll('main.content section[id], .endpoint[id]');
+    var links    = document.querySelectorAll('aside.sidebar a[href^="#"]');
+    if (!sections.length || !links.length) return;
+
+    var byHash = {};
+    links.forEach(function (a) { byHash[a.getAttribute('href')] = a; });
+
+    function setActive(hash) {
+      links.forEach(function (a) { a.classList.remove('active'); });
+      var a = byHash['#' + hash];
+      if (a) {
+        a.classList.add('active');
+        a.setAttribute('aria-current', 'location');
+      }
+    }
+
+    var io = new IntersectionObserver(function (entries) {
+      // Pick the first entry intersecting the viewport's top half.
+      var visible = entries
+        .filter(function (e) { return e.isIntersecting; })
+        .sort(function (a, b) { return a.boundingClientRect.top - b.boundingClientRect.top; });
+      if (visible.length) setActive(visible[0].target.id);
+    }, { rootMargin: '-72px 0px -65% 0px', threshold: 0 });
+
+    sections.forEach(function (s) { io.observe(s); });
+
+    // Initial state on load (in case page opens with a hash).
+    if (location.hash) setActive(location.hash.slice(1));
+    else if (sections[0]) setActive(sections[0].id);
+  })();
+
+  // ── Scroll progress bar (Phase 5 effect) ───────────────
+  (function () {
+    var bar = document.getElementById('scrollProgress');
+    if (!bar) return;
+    var prefersReduced = window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) { bar.style.display = 'none'; return; }
+
+    var ticking = false;
+    function update() {
+      var doc = document.documentElement;
+      var max = doc.scrollHeight - doc.clientHeight;
+      var pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+      bar.style.width = pct + '%';
+      ticking = false;
+    }
+    window.addEventListener('scroll', function () {
+      if (!ticking) {
+        requestAnimationFrame(update);
+        ticking = true;
+      }
+    }, { passive: true });
+    update();
+  })();
+
+  // ── Copy-to-clipboard on code blocks (functional add) ─
+  (function () {
+    if (!navigator.clipboard) return;
+    var blocks = document.querySelectorAll('main.content pre');
+    blocks.forEach(function (pre) {
+      // Wrap pre in a relative container, add copy button.
+      pre.style.position = 'relative';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.setAttribute('aria-label', 'Copy code');
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><rect x="8" y="8" width="12" height="12"/><path d="M5 16 H4 V4 H16 V5"/></svg>';
+      btn.style.cssText = 'position:absolute;top:8px;right:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:4px 6px;cursor:pointer;color:var(--ink-3);opacity:0;transition:opacity .15s,color .15s,border-color .15s;line-height:0;';
+      pre.appendChild(btn);
+
+      pre.addEventListener('mouseenter', function () { btn.style.opacity = '1'; });
+      pre.addEventListener('mouseleave', function () { btn.style.opacity = '0'; });
+      btn.addEventListener('focus',      function () { btn.style.opacity = '1'; });
+      btn.addEventListener('blur',       function () { btn.style.opacity = '0'; });
+
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var code = pre.querySelector('code') || pre;
+        navigator.clipboard.writeText(code.innerText).then(function () {
+          btn.style.color = 'var(--success)';
+          btn.style.borderColor = 'var(--success)';
+          btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M5 12 L10 17 L19 7"/></svg>';
+          setTimeout(function () {
+            btn.style.color = 'var(--ink-3)';
+            btn.style.borderColor = 'var(--border)';
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><rect x="8" y="8" width="12" height="12"/><path d="M5 16 H4 V4 H16 V5"/></svg>';
+          }, 1500);
+        });
+      });
+    });
+  })();
+</script>
+</body>
+</html>

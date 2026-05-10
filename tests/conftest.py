@@ -1,6 +1,14 @@
 """Shared test fixtures for the pronunciation validation service."""
 from __future__ import annotations
 
+import os
+
+# Disable rate limiting in tests BEFORE any app modules import settings
+# (Phase 01). DEBUG=true so tests don't need a 32-char API key.
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+os.environ.setdefault("DEBUG", "true")
+os.environ.setdefault("API_KEY", "")
+
 from unittest.mock import MagicMock
 
 import numpy as np

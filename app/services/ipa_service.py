@@ -116,7 +116,7 @@ class IPAService:
         _, phonemes = self._run_g2p(word)
         return phonemes
 
-    @lru_cache(maxsize=2048)
+    @lru_cache(maxsize=8192)  # Phase 03 / Finding 7-partial: ~16MB max footprint
     def _run_g2p(self, word: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
         """Run g2p exactly once per unique word and cache the result.
 

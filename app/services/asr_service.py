@@ -23,9 +23,14 @@ class ASRService:
         settings = get_settings()
         model_name = settings.asr_model_name
         cache_dir = settings.asr_model_cache_dir
-        self.device = torch.device(settings.device)
+        backend = settings.inference_backend
+        # INT8 quantize_dynamic only supports CPU; force device override.
+        self.device = torch.device("cpu" if backend == "torch_int8" else settings.device)
 
-        logger.info("Loading ASR model '{}' → {}", model_name, self.device)
+        logger.info(
+            "Loading ASR model '{}' → device={} backend={}",
+            model_name, self.device, backend,
+        )
         self.processor: Wav2Vec2Processor = Wav2Vec2Processor.from_pretrained(
             model_name, cache_dir=cache_dir
         )
@@ -38,11 +43,24 @@ class ASRService:
                 "ignore",
                 message=r"Some weights of Wav2Vec2ForCTC were not initialized",
             )
-            self.model: Wav2Vec2ForCTC = Wav2Vec2ForCTC.from_pretrained(
+            model: Wav2Vec2ForCTC = Wav2Vec2ForCTC.from_pretrained(
                 model_name,
                 cache_dir=cache_dir,
-            ).to(self.device)
-        self.model.eval()
+            )
+
+        if backend == "torch_int8":
+            # Dynamic INT8 quantization on Linear layers. The 7 Conv1d
+            # feature-extractor layers are NOT quantized — see Phase 03
+            # spike notes for realistic 1.1-1.4× speedup expectation.
+            from torch.quantization import quantize_dynamic
+
+            model = quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
+            logger.info("ASR model quantized to INT8 (Linear layers only)")
+        else:
+            model = model.to(self.device)
+
+        model.eval()
+        self.model = model
         logger.info("ASR model loaded successfully")
 
     # ── public API ───────────────────────────────────────────

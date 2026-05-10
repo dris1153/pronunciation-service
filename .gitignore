@@ -32,3 +32,6 @@ htmlcov/
 
 # Logs
 *.log
+
+# Local plans and reports
+/plans/

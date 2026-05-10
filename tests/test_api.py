@@ -172,10 +172,13 @@ class TestTranscribeEndpoint:
 
     @pytest.mark.asyncio
     @patch("app.api.routes.transcribe._transcribe_sync")
-    async def test_valid_audio_returns_200(self, mock_sync, client: AsyncClient):
+    async def test_valid_audio_returns_200(
+        self, mock_sync, client: AsyncClient, sample_audio_bytes
+    ):
         mock_sync.return_value = ("hello", 1.0)
 
-        audio = io.BytesIO(b"\x00" * 100)
+        # Real WAV bytes — Phase 02 pre-decode check now runs even for tests.
+        audio = io.BytesIO(sample_audio_bytes)
         resp = await client.post(
             "/api/v1/transcribe",
             files={"audio": ("test.wav", audio, "audio/wav")},
@@ -199,6 +202,7 @@ class TestEvaluateEndpoint:
 
     @pytest.mark.asyncio
     async def test_empty_reference_rejected(self, client: AsyncClient):
+        # Empty reference is rejected before audio is read — null bytes OK here.
         audio = io.BytesIO(b"\x00" * 100)
         resp = await client.post(
             "/api/v1/evaluate",
@@ -208,14 +212,16 @@ class TestEvaluateEndpoint:
         assert resp.status_code in (400, 422)
 
     @pytest.mark.asyncio
-    async def test_valid_request_returns_200(self, app, client: AsyncClient):
+    async def test_valid_request_returns_200(
+        self, app, client: AsyncClient, sample_audio_bytes
+    ):
         from app.api.dependencies import get_pronunciation_svc
 
         fake_svc = MagicMock()
         fake_svc.evaluate = AsyncMock(return_value=_fake_pronunciation_response())
         app.dependency_overrides[get_pronunciation_svc] = lambda: fake_svc
 
-        audio = io.BytesIO(b"\x00" * 100)
+        audio = io.BytesIO(sample_audio_bytes)
         resp = await client.post(
             "/api/v1/evaluate",
             data={"reference_text": "hello"},

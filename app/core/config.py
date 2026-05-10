@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Resolve .env relative to project root (two levels up from this file)
@@ -50,11 +52,47 @@ class Settings(BaseSettings):
     # Leave empty ("") to disable API key enforcement (not recommended in production).
     api_key: str = ""
 
+    # Rate limiting (Phase 01 / Finding 4 + Per-User Redesign)
+    rate_limit_enabled: bool = True
+    # Per-key per-minute caps. Key = IP (default) OR end-user-id when called
+    # from a trusted backend with X-Service-Auth set (see service_api_key).
+    rate_limit_evaluate_per_minute: int = 20
+    rate_limit_transcribe_per_minute: int = 15
+    rate_limit_text_analysis_per_minute: int = 120
+
+    # Service-to-service auth key (Per-User Rate Limit Redesign).
+    # When set, callers from a trusted-proxy CIDR can pass:
+    #   X-Service-Auth: <this value>
+    #   X-End-User-Id: <user-uuid|anon-session_id>
+    # to be rate-limited per-end-user instead of per-IP.
+    # Empty (default) = feature disabled, all callers key by IP.
+    # Generate: python -c "import secrets; print(secrets.token_urlsafe(48))"
+    service_api_key: str = ""
+
+    # Per-request timeout (Phase 01)
+    request_timeout_sec: int = 90
+
+    # CIDRs to trust as reverse-proxy peers when parsing X-Forwarded-For.
+    # Default = Docker RFC1918 ranges (Coolify Traefik). Operator can narrow
+    # to a specific Coolify proxy container IP via:
+    #   docker network inspect coolify
+    trusted_proxy_cidrs_str: str = "172.16.0.0/12,10.0.0.0/8,192.168.0.0/16"
+
+    @property
+    def trusted_proxy_cidrs(self) -> list[str]:
+        return [c.strip() for c in self.trusted_proxy_cidrs_str.split(",") if c.strip()]
+
     # ── Concurrency ──────────────────────────────────────────
-    # Maximum number of ML inference jobs (evaluate / transcribe) that may run
-    # concurrently.  Additional requests are queued, not rejected.
-    # Recommended: 2 for Railway (1 active + 1 warming up).
-    max_concurrent_inferences: int = 2
+    # 0 = auto-detect via cgroup-aware sched_getaffinity (Phase 02 / Finding 2).
+    # Positive value = explicit override.
+    max_concurrent_inferences: int = 0
+
+    # Queue timeout: requests waiting > this many seconds → 503 Retry-After.
+    inference_queue_timeout_sec: float = 60.0
+
+    # ── ASR backend (Phase 03 / Finding 1) ───────────────────
+    # Default = torch_fp32 until P06 sanity gate confirms torch_int8 safe.
+    inference_backend: Literal["torch_fp32", "torch_int8"] = "torch_fp32"
 
     # ── CORS ─────────────────────────────────────────────────
     # Comma-separated list of allowed origins, e.g.:
@@ -83,6 +121,34 @@ class Settings(BaseSettings):
     @property
     def model_cache_path(self) -> Path:
         return Path(self.asr_model_cache_dir)
+
+    # ── Validators ───────────────────────────────────────────
+
+    @model_validator(mode="after")
+    def _enforce_api_key_in_prod(self) -> "Settings":
+        """Block startup in prod if API_KEY is missing, weak, or too short.
+
+        Skipped when DEBUG=True (dev convenience). Reuses the weak-key set
+        defined in app.api.dependencies (imported lazily to avoid cycle).
+        """
+        if self.debug:
+            return self
+        # Lazy import to break circular dependency at import time.
+        from app.api.dependencies import _WEAK_API_KEYS
+
+        if not self.api_key:
+            raise ValueError("API_KEY must be set when DEBUG=False.")
+        if self.api_key.lower() in _WEAK_API_KEYS:
+            raise ValueError(
+                "API_KEY value rejected (matches known-weak placeholder list). "
+                'Generate a strong key: python -c "import secrets; '
+                'print(secrets.token_urlsafe(32))"'
+            )
+        if len(self.api_key) < 32:
+            raise ValueError(
+                "API_KEY must be at least 32 characters when DEBUG=False."
+            )
+        return self
 
 
 @lru_cache

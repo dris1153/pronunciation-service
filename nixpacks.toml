@@ -1,5 +1,12 @@
+# Phase 01 / Finding 14: provide non-root runtime + writable /app/tmp.
+# Phase 02 / Finding 11: util-linux supplies prlimit for hardened ffprobe.
+
 [phases.setup]
-aptPkgs = ["ffmpeg", "libsndfile1"]
+aptPkgs = ["ffmpeg", "libsndfile1", "util-linux"]
+cmds = [
+  "useradd -m -u 1000 appuser || true",
+  "mkdir -p /app/tmp /app/model_cache",
+]
 
 [phases.install]
 onlyIncludeFiles = ["requirements.txt"]
@@ -11,7 +18,13 @@ cmds = [
 [phases.build]
 cmds = [
   '''python -c "import os; model = os.environ.get('ASR_MODEL_NAME', 'facebook/wav2vec2-base-960h'); from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor; Wav2Vec2Processor.from_pretrained(model, cache_dir='model_cache'); Wav2Vec2ForCTC.from_pretrained(model, cache_dir='model_cache'); print(f'Model {model} baked into image successfully')"''',
+  "chown -R appuser:appuser /app",
 ]
 
+[variables]
+TMPDIR = "/app/tmp"
+
 [start]
-cmd = "python main.py"
+# Nixpacks runs CMD as root by default; switch to appuser via `su`.
+# If your Coolify config sets a `--user` flag, you can drop the `su` prefix.
+cmd = "su appuser -c 'python main.py'"

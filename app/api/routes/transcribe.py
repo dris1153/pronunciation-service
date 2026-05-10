@@ -1,13 +1,16 @@
 """Audio transcription API routes."""
-from __future__ import annotations
+# NOTE: no `from __future__ import annotations` — slowapi's wrapper breaks
+# FastAPI's UploadFile forward-ref resolution when annotations are deferred.
 
 import asyncio
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from loguru import logger
 
 from app.api.dependencies import verify_api_key
-from app.core.constants import ALLOWED_AUDIO_TYPES, MAX_UPLOAD_BYTES
+from app.api.middleware import limiter
+from app.core.config import get_settings
+from app.core.constants import ALLOWED_AUDIO_TYPES, MAX_UPLOAD_BYTES, MAX_UPLOAD_MB
 from app.models.schemas import ErrorResponse, TranscribeResponse
 from app.services.asr_service import get_asr_service
 from app.utils.audio import (
@@ -15,10 +18,15 @@ from app.utils.audio import (
     is_silent,
     load_audio_from_bytes,
     normalize_audio,
+    precheck_audio_duration,
     validate_audio_duration,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["transcription"])
+
+
+def _transcribe_rate() -> str:
+    return f"{get_settings().rate_limit_transcribe_per_minute}/minute"
 
 
 def _transcribe_sync(audio_bytes: bytes) -> tuple[str, float]:
@@ -51,7 +59,10 @@ def _transcribe_sync(audio_bytes: bytes) -> tuple[str, float]:
         400: {"model": ErrorResponse, "description": "Invalid input"},
         401: {"model": ErrorResponse, "description": "Missing API key"},
         403: {"model": ErrorResponse, "description": "Invalid API key"},
+        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
         500: {"model": ErrorResponse, "description": "Internal error"},
+        503: {"model": ErrorResponse, "description": "Server busy (queue full)"},
+        504: {"model": ErrorResponse, "description": "Request timeout"},
     },
     summary="Transcribe audio to text",
     description=(
@@ -59,7 +70,9 @@ def _transcribe_sync(audio_bytes: bytes) -> tuple[str, float]:
         "Uses the same Wav2Vec2 ASR model as the evaluation endpoint."
     ),
 )
+@limiter.limit(_transcribe_rate)
 async def transcribe_audio(
+    request: Request,
     audio: UploadFile = File(..., description="Audio file (wav, mp3, ogg, flac)"),
     _: None = Depends(verify_api_key),
 ) -> TranscribeResponse:
@@ -74,7 +87,7 @@ async def transcribe_audio(
                 detail=(
                     f"Audio file too large "
                     f"({len(audio_bytes) / 1024 / 1024:.1f} MB). "
-                    f"Maximum allowed size is 25 MB."
+                    f"Maximum allowed size is {MAX_UPLOAD_MB} MB."
                 ),
             )
 
@@ -90,6 +103,13 @@ async def transcribe_audio(
                        + (f": {content_type}" if content_type else "")
                        + f". Supported: {', '.join(sorted(ALLOWED_AUDIO_TYPES))}",
             )
+
+        # Pre-decode duration check (Phase 02 / Finding 11)
+        await precheck_audio_duration(
+            audio_bytes,
+            content_type,
+            float(get_settings().audio_max_duration_sec),
+        )
 
         loop = asyncio.get_running_loop()
 

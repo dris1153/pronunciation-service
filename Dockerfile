@@ -3,11 +3,19 @@ FROM python:3.11-slim
 # ----------------------------
 # System dependencies
 # ----------------------------
+# util-linux provides `prlimit` (used by Phase 02 ffprobe sandbox).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libsndfile1 \
     curl \
+    util-linux \
     && rm -rf /var/lib/apt/lists/*
+
+# ----------------------------
+# Non-root user (Phase 01 / Finding 14)
+# ----------------------------
+RUN useradd -m -u 1000 appuser \
+ && mkdir -p /app /app/tmp /app/model_cache
 
 # ----------------------------
 # Workdir
@@ -50,8 +58,15 @@ RUN python download_model.py
 # Runtime config
 # ----------------------------
 ENV PORT=8001
+ENV TMPDIR=/app/tmp
 
 EXPOSE 8001
+
+# ----------------------------
+# Drop privileges (Phase 01 / Finding 14)
+# ----------------------------
+RUN chown -R appuser:appuser /app
+USER appuser
 
 # ----------------------------
 # Start app
