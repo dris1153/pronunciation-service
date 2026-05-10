@@ -820,13 +820,16 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
           <text class="label" x="210" y="242" text-anchor="middle">Word-level Error Classification</text>
           <text class="sub"   x="210" y="260" text-anchor="middle">None / Mispronunciation / Omission / Insertion / Break</text>
 
-          <line class="arrow" x1="400" y1="248" x2="440" y2="248" marker-end="url(#arrow)"/>
+          <line class="arrow" x1="400" y1="248" x2="420" y2="248" marker-end="url(#arrow)"/>
 
-          <rect class="box"   x="440" y="220" width="200" height="56"/>
+          <!-- Sub-score Aggregation box: widened 200 → 240 to fit the
+               "accuracy · completeness · fluency · prosody" sub text.
+               Center stays at x=540 (midpoint of 420-660). Arrows shortened. -->
+          <rect class="box"   x="420" y="220" width="240" height="56"/>
           <text class="label" x="540" y="242" text-anchor="middle">Sub-score Aggregation</text>
           <text class="sub"   x="540" y="260" text-anchor="middle">accuracy · completeness · fluency · prosody</text>
 
-          <line class="arrow" x1="640" y1="248" x2="680" y2="248" marker-end="url(#arrow)"/>
+          <line class="arrow" x1="660" y1="248" x2="680" y2="248" marker-end="url(#arrow)"/>
 
           <rect class="out"   x="680" y="220" width="180" height="56"/>
           <text class="label" x="770" y="242" text-anchor="middle">Combined Score</text>
