@@ -735,7 +735,7 @@ The project includes `railway.toml` for [Railway](https://railway.app) deploymen
 | `CORS_ORIGINS_STR`          | `*`                           | Comma-separated allowed origins (or `*`)       |
 | `AUDIO_SAMPLE_RATE`         | `16000`                       | Audio sample rate (Hz)                         |
 | `AUDIO_MAX_DURATION_SEC`    | `30`                          | Max audio duration                             |
-| `MAX_CONCURRENT_INFERENCES` | `2`                           | Max simultaneous ML inference jobs (semaphore) |
+| `MAX_CONCURRENT_INFERENCES` | `0` (auto)                    | Inference slots; torch threads = cores ÷ slots. 4 vCPU → set `2`; 2 vCPU → auto |
 | `DEBUG`                     | `false`                       | Enable uvicorn reload                          |
 | `LOG_LEVEL`                 | `INFO`                        | Logging level                                  |
 
@@ -761,6 +761,23 @@ pytest tests/ -v
 | `conftest.py`                   | Shared fixtures (mock services, async client)                                                                    |
 
 Async tests use `pytest-asyncio` with `asyncio_mode = "auto"`.
+
+## 📏 Evaluation
+
+**Latency per stage** — every `/evaluate` logs one `evaluate_timing` record (`stage_ms`: decode, asr, ipa, gop, prosody, total). Offline benchmark on the real pipeline:
+
+```bash
+python debugs/benchmark.py --cpus 2                       # mimic a 2-vCPU VPS
+python debugs/benchmark.py --cpus 4 --concurrency 2       # 2 inference slots under load
+```
+
+**Correlation with human raters** — [speechocean762](https://www.openslr.org/101/) (CC BY 4.0, Zhang et al., Interspeech 2021). Extract to `data/speechocean762/`, then:
+
+```bash
+python scripts/speechocean762_eval.py --out data/so762-test.jsonl --report reports/so762-test.json
+```
+
+Reports Pearson correlation of utterance / word / phone scores vs expert scores and phone-level mispronunciation precision/recall/F1 (all speakers + adults only). Runs in-process (no HTTP, no rate limit) and resumes from the JSONL.
 
 ## 📊 Resource Benchmarks
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -686,20 +687,17 @@ class PronunciationService:
         6. Build unified response
 
         CPU-bound ML inference (steps 1–4) is offloaded to a thread-pool
-        via ``run_in_executor`` so the async event loop is never blocked.
+        via ``asyncio.to_thread`` so the async event loop is never blocked.
+        ``to_thread`` copies contextvars, so logs from the worker keep the
+        middleware's ``request_id`` (``run_in_executor`` would drop it).
 
         A shared ``asyncio.Semaphore`` limits concurrency to prevent
         resource exhaustion.  Extra requests are **queued**, not rejected.
         """
         from app.core.concurrency import inference_semaphore
 
-        loop = asyncio.get_running_loop()
-
         async with inference_semaphore():
-            result = await loop.run_in_executor(
-                None, self._evaluate_sync, audio_bytes, reference_text
-            )
-        return result
+            return await asyncio.to_thread(self._evaluate_sync, audio_bytes, reference_text)
 
     # ── sync pipeline (runs inside thread-pool) ─────────────
 
@@ -709,6 +707,15 @@ class PronunciationService:
         reference_text: str,
     ) -> PronunciationResponse:
         """Synchronous implementation of the evaluation pipeline."""
+        start = lap_start = time.perf_counter()
+        stage_ms: dict[str, float] = {}
+
+        def lap(stage: str) -> None:
+            nonlocal lap_start
+            now = time.perf_counter()
+            stage_ms[stage] = round((now - lap_start) * 1000, 1)
+            lap_start = now
+
         # 1 — Audio
         waveform, sr = load_audio_from_bytes(audio_bytes)
         validate_audio_duration(waveform, sr)
@@ -723,9 +730,12 @@ class PronunciationService:
             return self._zero_score_response(reference_text)
 
         waveform = normalize_audio(waveform)
+        lap("decode")
 
-        # 2 — Transcribe
-        raw_transcription = self._asr.transcribe(waveform, sr)
+        # 2 — Transcribe (one forward pass; the emission is reused for GOP)
+        emission = self._asr.get_emission(waveform, sr)
+        raw_transcription = self._asr.decode(emission)
+        lap("asr")
 
         # Strip filler / disfluency words (uh, um, …) so they don't create
         # false INSERT operations that unfairly penalise the IPA score.
@@ -745,9 +755,11 @@ class PronunciationService:
 
         # 3b — IPA (sequence-alignment based; reuses pre-computed word_ops)
         ipa_result = self._build_ipa_result(reference_text, transcription, word_ops)
+        lap("ipa")
 
         # 4 — GOP
-        gop_result = self._gop.score(waveform, sr, reference_text)
+        gop_result = self._gop.score(waveform, sr, reference_text, emission=emission)
+        lap("gop")
 
         # 4b — Prosody
         # Extract word-level durations from CTC timing for speed & rhythm
@@ -770,6 +782,7 @@ class PronunciationService:
             word_durations=word_durations if word_durations else None,
             total_duration=total_audio_duration,
         )
+        lap("prosody")
 
         # 5 — Sub-scores
         #
@@ -818,6 +831,9 @@ class PronunciationService:
         results = self._merge_results(
             ipa_result, gop_result, word_ops, break_word_indices, missing_break_indices,
         )
+
+        stage_ms["total"] = round((time.perf_counter() - start) * 1000, 1)
+        logger.bind(stage_ms=stage_ms).info("evaluate_timing")
 
         return PronunciationResponse(
             reference_text=reference_text,

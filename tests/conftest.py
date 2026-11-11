@@ -32,6 +32,7 @@ def _make_fake_asr():
     """Create a mock ASRService that avoids loading the real model."""
     asr = MagicMock()
     asr.transcribe.return_value = "hello world"
+    asr.decode.return_value = "hello world"
     # Vocabulary: <pad>=0, <s>=1, </s>=2, <unk>=3, |=4, A-Z=5..30 → 31 entries
     # Emission tensors must use V=31 to match this vocab size.
     vocab: dict[str, int] = {"<pad>": 0, "<s>": 1, "</s>": 2, "<unk>": 3, "|": 4}

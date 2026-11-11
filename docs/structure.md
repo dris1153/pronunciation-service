@@ -72,6 +72,7 @@ pronuncation-validate/
 │   │   ├── asr_service.py      # Wav2Vec2 speech-to-text + CTC log-prob extraction
 │   │   │                       #   get_ctc_log_probs() → (T, V) for GOP
 │   │   │                       #   get_emission() → (1, T, V) for forced alignment
+│   │   │                       #   decode(emission) → transcript without a 2nd forward pass
 │   │   │                       #   Suppresses masked_spec_embed HF warning
 │   │   │                       #   Singleton via @lru_cache → get_asr_service()
 │   │   ├── ipa_service.py      # g2p_en text→IPA, _ARPABET_TO_IPA mapping (41 IPA symbols)
@@ -80,7 +81,7 @@ pronuncation-validate/
 │   │   │                       #   Singleton via @lru_cache → get_ipa_service()
 │   │   ├── gop_service.py      # GOP scoring from CTC log-posteriors
 │   │   │                       #   _IPA_TO_WAV2VEC mapping (41 IPA→letter, synced with ipa_service)
-│   │   │                       #   score() calls get_emission() once → derives log_probs via squeeze
+│   │   │                       #   score(..., emission=) reuses the orchestrator's emission (one ASR pass per /evaluate)
 │   │   │                       #   Silent audio guard (is_silent) short-circuits inference
 │   │   │                       #   Forced alignment via torchaudio.functional.forced_align
 │   │   │                       #   Falls back to remainder-aware uniform frame segmentation

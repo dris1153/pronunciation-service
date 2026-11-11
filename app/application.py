@@ -89,12 +89,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # immediately rather than mid-request.
     _verify_writable_dirs()
 
-    # Log detected concurrency (Phase 02 / Finding 2)
-    from app.core.concurrency import _detect_available_cpus
+    # Must run before any torch parallel work (model load) — interop threads
+    # can only be set once per process.
+    import torch
 
+    from app.core.concurrency import _resolve_concurrency, torch_threads_per_slot
+
+    # Affinity can't see a CFS quota (docker --cpus, Railway): set
+    # OMP_NUM_THREADS there and it wins over the computed value.
+    if not os.environ.get("OMP_NUM_THREADS"):
+        torch.set_num_threads(torch_threads_per_slot())
+    try:
+        torch.set_num_interop_threads(1)
+    except RuntimeError:
+        logger.warning("torch interop threads already initialised; left unchanged")
     logger.info(
-        "Concurrent inference slots: {} (detected via sched_getaffinity, capped)",
-        _detect_available_cpus(),
+        "Concurrent inference slots: {} | torch threads per slot: {}",
+        _resolve_concurrency(),
+        torch.get_num_threads(),
     )
 
     # Emit API key warning after logging is configured (not at import time)

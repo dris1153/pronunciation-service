@@ -21,19 +21,25 @@ from loguru import logger
 from app.core.constants import MAX_CONCURRENT_INFERENCES_CAP
 
 
-def _detect_available_cpus() -> int:
-    """Return a safe inference concurrency count for the current container.
+def _affinity_cpus() -> int:
+    """Cores this process may run on.
 
     ``sched_getaffinity`` honours cgroup CPU pinning on Linux. Falls back to
     ``cpu_count()`` on platforms without affinity support (macOS, Windows).
-    Result is capped at :data:`MAX_CONCURRENT_INFERENCES_CAP` and at least 1.
     """
     try:
-        affinity = len(os.sched_getaffinity(0))
+        return len(os.sched_getaffinity(0))
     except (AttributeError, OSError):
-        affinity = os.cpu_count() or 1
+        return os.cpu_count() or 1
+
+
+def _detect_available_cpus() -> int:
+    """Return a safe inference concurrency count for the current container.
+
+    Result is capped at :data:`MAX_CONCURRENT_INFERENCES_CAP` and at least 1.
+    """
     # Leave one core for the event loop / OS scheduler.
-    return max(1, min(affinity - 1, MAX_CONCURRENT_INFERENCES_CAP))
+    return max(1, min(_affinity_cpus() - 1, MAX_CONCURRENT_INFERENCES_CAP))
 
 
 def _resolve_concurrency() -> int:
@@ -41,6 +47,15 @@ def _resolve_concurrency() -> int:
 
     override = get_settings().max_concurrent_inferences
     return override if override > 0 else _detect_available_cpus()
+
+
+def torch_threads_per_slot() -> int:
+    """Torch intra-op threads per inference slot, so slots × threads ≈ cores.
+
+    Without a cap every concurrent job spawns one thread per core and they
+    oversubscribe the CPU.
+    """
+    return max(1, _affinity_cpus() // _resolve_concurrency())
 
 
 @lru_cache

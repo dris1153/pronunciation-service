@@ -27,6 +27,19 @@ class TestDetectCpus:
         assert _detect_available_cpus() == concurrency.MAX_CONCURRENT_INFERENCES_CAP
 
 
+class TestTorchThreadsPerSlot:
+    @pytest.mark.parametrize(
+        ("cpus", "slots", "expected"),
+        [(4, 2, 2), (4, 3, 1), (2, 1, 2), (2, 3, 1), (8, 3, 2)],
+    )
+    def test_divides_cores_across_slots(self, monkeypatch, cpus, slots, expected):
+        from app.core import concurrency
+
+        monkeypatch.setattr(concurrency, "_affinity_cpus", lambda: cpus)
+        monkeypatch.setattr(concurrency, "_resolve_concurrency", lambda: slots)
+        assert concurrency.torch_threads_per_slot() == expected
+
+
 @pytest.fixture(autouse=True)
 def _fresh_semaphore():
     """Clear the lru_cache so each test gets a Semaphore bound to its own loop."""

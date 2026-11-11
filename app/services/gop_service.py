@@ -109,8 +109,12 @@ class GOPService:
         waveform: np.ndarray,
         sr: int,
         reference_text: str,
+        emission: torch.Tensor | None = None,
     ) -> GOPResult:
         """Compute GOP scores for the given audio vs reference text.
+
+        Pass ``emission`` ((1, T, V) CTC log-probs) when the caller already ran
+        the ASR model, to avoid a second forward pass.
 
         Frame segmentation strategy:
         1. Map IPA phonemes → Wav2Vec2 token indices.
@@ -156,8 +160,9 @@ class GOPService:
         # for _compute_phoneme_gop by squeezing the batch dimension here so
         # that get_emission() is called exactly once instead of duplicating
         # the log-softmax work inside get_ctc_log_probs().
-        emission = self._asr.get_emission(waveform, sr)   # (1, T, V)
-        log_probs = emission.squeeze(0)                    # (T, V)
+        if emission is None:
+            emission = self._asr.get_emission(waveform, sr)   # (1, T, V)
+        log_probs = emission.squeeze(0)                        # (T, V)
         words = text_to_words(reference_text)
 
         # Build flat phoneme list: (word_index, word, ipa_phoneme)

@@ -41,14 +41,16 @@ Client                  FastAPI                PronunciationService        ASR /
   │                       │                           │── validate_audio_duration()
   │                       │                           │── normalize_audio()      │
   │                       │                           │                          │
-  │                       │                           │── asr.transcribe() ───▶ │ Wav2Vec2
-  │                       │                           │◀── transcription ────── │
+  │                       │                           │── asr.get_emission() ─▶ │ Wav2Vec2 (1 pass)
+  │                       │                           │◀── emission ─────────── │
+  │                       │                           │── asr.decode(emission)   │
+  │                       │                           │   → transcription        │
   │                       │                           │                          │
   │                       │                           │── ipa.to_ipa() ───────▶ │ g2p_en
   │                       │                           │◀── ref_ipa + act_ipa ── │
   │                       │                           │── compare phonemes       │
   │                       │                           │                          │
-  │                       │                           │── gop.score() ────────▶ │ CTC log-probs
+  │                       │                           │── gop.score(emission) ▶ │ reuses emission
   │                       │                           │◀── gop_result ───────── │
   │                       │                           │                         │
   │                       │                           │── combined_score        │

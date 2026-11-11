@@ -368,7 +368,7 @@ class TestEvaluateSync:
         mock_norm.side_effect = lambda w: w
 
         # Simulate ASR returning fillers
-        svc._asr.transcribe.return_value = "uh hello um world"
+        svc._asr.decode.return_value = "uh hello um world"
 
         result = svc._evaluate_sync(b"fake_bytes", "hello world")
 
@@ -385,7 +385,7 @@ class TestEvaluateSync:
         mock_load.return_value = (np.random.randn(16000).astype(np.float32), 16000)
         mock_norm.side_effect = lambda w: w
 
-        svc._asr.transcribe.return_value = "uh um hmm"
+        svc._asr.decode.return_value = "uh um hmm"
 
         result = svc._evaluate_sync(b"fake_bytes", "hello")
 
@@ -393,6 +393,42 @@ class TestEvaluateSync:
         # Returning raw filler text would create spurious INSERT operations that
         # unfairly penalise accuracy.
         assert result.transcribed_text == ""
+
+    @patch("app.services.pronunciation_service.load_audio_from_bytes")
+    @patch("app.services.pronunciation_service.validate_audio_duration")
+    @patch("app.services.pronunciation_service.normalize_audio")
+    def test_runs_asr_model_once(self, mock_norm, mock_val, mock_load, svc):
+        """Transcript and GOP must share one emission — no second forward pass."""
+        mock_load.return_value = (np.random.randn(16000).astype(np.float32), 16000)
+        mock_norm.side_effect = lambda w: w
+
+        svc._evaluate_sync(b"fake_bytes", "hello world")
+
+        svc._asr.get_emission.assert_called_once()
+        svc._asr.transcribe.assert_not_called()
+        svc._asr.decode.assert_called_once_with(svc._asr.get_emission.return_value)
+
+    @patch("app.services.pronunciation_service.load_audio_from_bytes")
+    @patch("app.services.pronunciation_service.validate_audio_duration")
+    @patch("app.services.pronunciation_service.normalize_audio")
+    def test_emits_one_stage_timing_record(self, mock_norm, mock_val, mock_load, svc):
+        from loguru import logger
+
+        mock_load.return_value = (np.random.randn(16000).astype(np.float32), 16000)
+        mock_norm.side_effect = lambda w: w
+        records: list[dict] = []
+        sink_id = logger.add(
+            lambda m: records.append(m.record["extra"]["stage_ms"]),
+            filter=lambda r: r["message"] == "evaluate_timing",
+        )
+        try:
+            svc._evaluate_sync(b"fake_bytes", "hello world")
+        finally:
+            logger.remove(sink_id)
+
+        assert len(records) == 1
+        assert set(records[0]) == {"decode", "asr", "ipa", "gop", "prosody", "total"}
+        assert all(v >= 0 for v in records[0].values())
 
 
 # ── _detect_error_type ───────────────────────────────────────────────────────
@@ -563,7 +599,7 @@ class TestEvaluateSyncNewFields:
         mock_norm.side_effect = lambda w: w
 
         # ASR only returns "hello" but reference is "hello world"
-        svc._asr.transcribe.return_value = "hello"
+        svc._asr.decode.return_value = "hello"
         result = svc._evaluate_sync(b"fake_bytes", "hello world")
         assert result.completeness_score < 100.0
 
@@ -587,7 +623,7 @@ class TestEvaluateSyncNewFields:
         mock_load.return_value = (np.random.randn(16000).astype(np.float32), 16000)
         mock_norm.side_effect = lambda w: w
 
-        svc._asr.transcribe.return_value = "hello"
+        svc._asr.decode.return_value = "hello"
         result = svc._evaluate_sync(b"fake_bytes", "hello world")
 
         error_types = {wd.word: wd.error_type for wd in result.results.word_details}

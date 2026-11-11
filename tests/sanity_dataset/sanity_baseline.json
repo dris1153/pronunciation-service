@@ -1,0 +1,47 @@
+{
+  "good_001_phrase": {
+    "overall_score": 75.7,
+    "level": "good",
+    "expected_band": [
+      70,
+      100
+    ],
+    "in_band": true
+  },
+  "good_002_sentence": {
+    "overall_score": 84.41,
+    "level": "excellent",
+    "expected_band": [
+      70,
+      100
+    ],
+    "in_band": true
+  },
+  "good_003_paragraph": {
+    "overall_score": 87.05,
+    "level": "excellent",
+    "expected_band": [
+      70,
+      100
+    ],
+    "in_band": true
+  },
+  "poor_001_substitution": {
+    "overall_score": 61.05,
+    "level": "good",
+    "expected_band": [
+      20,
+      60
+    ],
+    "in_band": false
+  },
+  "poor_002_omission": {
+    "overall_score": 61.33,
+    "level": "good",
+    "expected_band": [
+      20,
+      60
+    ],
+    "in_band": false
+  }
+}

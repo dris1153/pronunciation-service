@@ -68,8 +68,15 @@ class ASRService:
     @torch.no_grad()
     def transcribe(self, waveform: np.ndarray, sr: int) -> str:
         """Return plain-text transcription."""
-        logits = self._get_logits(waveform, sr)
-        predicted_ids = torch.argmax(logits, dim=-1)
+        return self.decode(self._get_logits(waveform, sr))
+
+    def decode(self, emission: torch.Tensor) -> str:
+        """Greedy CTC decode of logits or log-probs shaped (1, T, V).
+
+        argmax of logits and of their log_softmax agree (up to float32 ties), so
+        callers that already hold the emission can skip a second forward pass.
+        """
+        predicted_ids = torch.argmax(emission, dim=-1)
         transcription: str = self.processor.batch_decode(predicted_ids)[0]
         return transcription.strip().lower()
 

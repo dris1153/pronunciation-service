@@ -10,6 +10,8 @@ env/
 
 # Model cache
 model_cache/
+# Downloaded datasets (speechocean762) + eval prediction dumps
+/data/
 
 # IDE
 .idea/
