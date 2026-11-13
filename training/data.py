@@ -57,9 +57,11 @@ def load_wave(path: str) -> np.ndarray:
     return wave / peak if peak > 0 else wave
 
 
-def make_batches(utts: list[Utt], batch_seconds: float, shuffle: bool) -> list[list[Utt]]:
+def make_batches(
+    utts: list[Utt], batch_seconds: float, shuffle: bool, max_seconds: float = MAX_SECONDS
+) -> list[list[Utt]]:
     """Group utterances of similar length so zero padding stays small."""
-    ordered = sorted((u for u in utts if u.seconds <= MAX_SECONDS), key=lambda u: u.seconds)
+    ordered = sorted((u for u in utts if u.seconds <= max_seconds), key=lambda u: u.seconds)
     batches: list[list[Utt]] = []
     cur: list[Utt] = []
     for u in ordered:

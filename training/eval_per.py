@@ -41,7 +41,7 @@ def greedy_decode(logits: torch.Tensor, n_frames: int) -> list[int]:
 def evaluate(model: HubertForCTC, utts: list[Utt], device: str, batch_seconds: float = 120.0) -> dict:
     model.eval()
     loader = torch.utils.data.DataLoader(
-        BatchLoader(make_batches(utts, batch_seconds, shuffle=False)),
+        BatchLoader(make_batches(utts, batch_seconds, shuffle=False, max_seconds=float("inf"))),  # evaluate every utterance
         batch_size=None, num_workers=2,
     )
     errors = total = blank_frames = frames = 0

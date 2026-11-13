@@ -166,7 +166,21 @@ class PronunciationResponse(BaseModel):
 # ── v2 (additive: same keys as v1 plus word timing) ──────────────────────────
 
 
+class PhonemeResultV2(PhonemeResult):
+    is_correct_ipa: bool = Field(
+        ...,
+        description=(
+            "Learned verdict, not a symbol comparison: false when the phone's score is below the "
+            "mispronunciation threshold. actual_ipa is only the phone the model heard; it may differ "
+            "from expected_ipa while this is still true (accent-neutral variants such as ɪ/i)."
+        ),
+    )
+
+
 class WordResultV2(WordResult):
+    phoneme_details: list[PhonemeResultV2] = Field(
+        default_factory=list, description="Per-phoneme IPA + GOP detail"
+    )
     start_ms: int = Field(..., ge=0, description="Word start in the audio (ms)")
     end_ms: int = Field(..., ge=0, description="Word end in the audio (ms)")
 

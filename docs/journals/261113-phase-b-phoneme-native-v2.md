@@ -56,7 +56,7 @@ PER on LibriSpeech test-clean: 1.86%. Speed: 13.2 req/s INT8 vs 3.9 req/s v1 (4 
 - Calibration on 5 gTTS clips. Exponent 1.4 is a guess.
 - RAM gate missed: 430/600 MB against 400 MB.
 - Docker build and HF upload untested. Private repo token path unverified on Railway or Coolify.
-- Review M3 (mixed score scales) and M2 (no speech gate: noise got a confident score) fixed afterwards: one curve for all four headline scores, and zero score when < 20% of expected phones are decoded. Open, owner decision needed: M4 `is_correct_ipa` vs `actual_ipa` contradiction, M5 20 s training cap vs 30 s serving, M6 build-secret wiring.
+- Review M3 (mixed score scales) and M2 (no speech gate: noise got a confident score) fixed afterwards: one curve for all four headline scores, and zero score when < 20% of expected phones are decoded. M5 (20 s training cap vs 30 s serving) measured: PER stays 1.2-2.6% up to 35 s, no retrain; the eval harness had silently skipped utterances > 20 s (fixed, PER unchanged at 1.86%). M4 (`is_correct_ipa` vs `actual_ipa`) documented in the schema/API/docs with measured disagreement (18% heard differently yet accepted). Open, owner decision needed: M6 build-secret wiring.
 
 ## Next Steps
 

@@ -327,7 +327,7 @@ Differences from v1:
 | --- | --- |
 | `results.word_details[].start_ms` / `end_ms` | **New.** Word position in the audio (ms). |
 | `transcribed_text` | The heard **IPA string**, not words (there is no word ASR). |
-| `phoneme_details[].is_correct_ipa` | Learned flag (phone score < 1.48/2), not `actual_ipa == expected_ipa`. `actual_ipa` is still the heard phone. |
+| `phoneme_details[].is_correct_ipa` | Learned flag (phone score < 1.48/2), not `actual_ipa == expected_ipa`. `actual_ipa` is only the heard phone. On speechocean762 test, 18% of phones are heard differently yet accepted (accent-neutral variants such as ɪ/i, ʌ/ɑ); 0.3% are heard correctly yet flagged. Use `is_correct_ipa` for "needs practice", `actual_ipa` for "what it sounded like". |
 | `overall_score`, `accuracy_score`, `fluency_score`, `prosody_score` | Learned predictions mapped onto a stricter curve (`100·(s/10)^1.4`), the same for all four. `completeness_score` is the share of non-deleted phones. |
 | `error_type` | `Omission` (all phones deleted), `Mispronunciation` (word score < 60), then `UnexpectedBreak` / `MissingBreak` as in v1. `Insertion` is never set on words (same as v1). |
 

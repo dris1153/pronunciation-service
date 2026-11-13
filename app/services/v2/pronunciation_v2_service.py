@@ -13,7 +13,7 @@ from app.models.schemas import (
     ErrorType,
     EvaluationResultV2,
     GOPResult,
-    PhonemeResult,
+    PhonemeResultV2,
     PronunciationLevel,
     PronunciationResponseV2,
     WordGOP,
@@ -123,17 +123,17 @@ class PronunciationV2Service:
         )
 
     def _word_result(self, w: WordAnalysis, phone_scores: list[float], word_score: float) -> WordResultV2:
-        details: list[PhonemeResult] = []
+        details: list[PhonemeResultV2] = []
         for ph, s in zip(w.phones, phone_scores):
             gop = _clip100(s * 50)
-            details.append(PhonemeResult(
+            details.append(PhonemeResultV2(
                 expected_ipa=ph.expected, actual_ipa=ph.heard,
                 is_correct_ipa=s >= self._scorer.mdd_threshold,
                 confidence_ipa=_phoneme_similarity(ph.expected, ph.heard) if ph.heard else 0.0,
                 gop_score=gop, gop_quality=_level_from_score(gop),
             ))
         details += [
-            PhonemeResult(expected_ipa="", actual_ipa=a, is_correct_ipa=False, confidence_ipa=0.0,
+            PhonemeResultV2(expected_ipa="", actual_ipa=a, is_correct_ipa=False, confidence_ipa=0.0,
                           gop_score=0.0, gop_quality=PronunciationLevel.POOR)
             for a in w.inserted
         ]

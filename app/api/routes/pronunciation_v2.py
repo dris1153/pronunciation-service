@@ -30,6 +30,8 @@ router = APIRouter(prefix="/api/v2", tags=["pronunciation-v2"])
     description=(
         "Same request and response shape as v1, scored by a phoneme-level model and a learned scorer, "
         "with per-word start_ms/end_ms. `transcribed_text` is the heard IPA string. "
+        "`phoneme_details[].is_correct_ipa` is a learned verdict, not `actual_ipa == expected_ipa`: "
+        "a differently heard phone can still be accepted. "
         "Requires a valid API key in the **X-API-Key** header."
     ),
 )
