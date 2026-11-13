@@ -1,4 +1,4 @@
-<!-- doc-id: docs-deployment | rev: c9e42585 -->
+<!-- doc-id: docs-deployment | rev: f727b392 -->
 # Deployment
 
 One container serves both pipelines. v1 weights come from Hugging Face public repos; the v2 files (`model.int8.onnx`, `vocab.json`, `scorer.json`) come from a **private** Hugging Face repo. Both are baked into the image at build time (no persistent volumes needed).
@@ -33,7 +33,7 @@ docker build -t pronunciation-validator .
 # v1 + v2: the token travels as a BuildKit secret, so it never lands in an image layer
 docker build \
   --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 \
-  --secret id=hf_token,env=HF_TOKEN \
+  --secret id=HF_TOKEN,env=HF_TOKEN \
   -t pronunciation-validator .
 
 docker run -p 8000:8000 -e API_KEY=<32+ char key> -e DEBUG=false pronunciation-validator
@@ -47,7 +47,7 @@ What the image does: `python:3.11-slim` + ffmpeg/libsndfile, CPU-only PyTorch (v
 
 `railway.toml` uses the Dockerfile builder, health check `GET /health` (120 s timeout) and restart on failure (3 retries). `PORT` is injected by Railway and read by pydantic-settings. Set `API_KEY`, `DEBUG=false` and the rest in the dashboard.
 
-For v2, Railway must expose `HF_TOKEN` to the build. Railway mounts build secrets by **service variable name**, so the Dockerfile secret id (`hf_token`) may need to be `HF_TOKEN` there; verify on the first real build. Without the token the build of the v2 step fails when `V2_MODEL_REPO` is set; leave `V2_MODEL_REPO` unset to ship v1 only.
+For v2, Railway must expose `HF_TOKEN` to the build. Railway mounts build secrets by **service variable name**, which is why the Dockerfile secret id is `HF_TOKEN`. If no secret is mounted, the `HF_TOKEN` build arg is used instead. Without a token the v2 step fails when `V2_MODEL_REPO` is set; leave `V2_MODEL_REPO` unset to ship v1 only.
 
 ## Coolify / nixpacks
 

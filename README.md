@@ -1,4 +1,4 @@
-<!-- doc-id: readme | rev: 078fdfd7 -->
+<!-- doc-id: readme | rev: 8199879a -->
 <div align="center">
 
 # 🗣️ Pronunciation Validation Service
@@ -129,7 +129,7 @@ curl -X POST http://localhost:8000/api/v2/evaluate \
 ### Docker
 
 ```bash
-docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 --secret id=hf_token,env=HF_TOKEN -t pronunciation-validator .
+docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 --secret id=HF_TOKEN,env=HF_TOKEN -t pronunciation-validator .
 docker run -p 8000:8000 -e API_KEY=<32+ char key> -e DEBUG=false pronunciation-validator
 ```
 
