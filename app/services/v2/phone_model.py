@@ -10,6 +10,7 @@ import onnxruntime as ort
 from app.utils.audio import normalize_audio
 
 FRAME_MS = 20  # HuBERT conv stride: 320 samples @ 16 kHz
+MIN_SAMPLES = 400  # the conv front-end rejects anything shorter (25 ms)
 
 
 class PhoneModel:
@@ -19,13 +20,18 @@ class PhoneModel:
         opts.inter_op_num_threads = 1
         opts.enable_mem_pattern = False  # input length differs per request
         opts.enable_cpu_mem_arena = True
-        name = "model.int8.onnx" if int8 else "model.onnx"
-        self._sess = ort.InferenceSession(str(model_dir / name), opts, providers=["CPUExecutionProvider"])
+        model_path = model_dir / ("model.int8.onnx" if int8 else "model.onnx")
+        # onnxruntime raises its own NoSuchFile, which callers can't tell from a corrupt model
+        for path in (model_path, model_dir / "vocab.json"):
+            if not path.exists():
+                raise FileNotFoundError(str(path))
+        self._sess = ort.InferenceSession(str(model_path), opts, providers=["CPUExecutionProvider"])
         self.vocab: list[str] = json.loads((model_dir / "vocab.json").read_text(encoding="utf-8"))
-        self.phone_to_id = {p: i for i, p in enumerate(self.vocab)}
 
     def log_posteriors(self, waveform: np.ndarray) -> np.ndarray:
         """16 kHz mono float32 -> (T, V) log-softmax; blank is index 0."""
+        if len(waveform) < MIN_SAMPLES:
+            raise ValueError("Audio is too short to analyse.")
         wave = normalize_audio(np.asarray(waveform, dtype=np.float32))[None, :]
         logits = self._sess.run(None, {"wave": wave})[0][0].astype(np.float64)
         logits -= logits.max(axis=-1, keepdims=True)

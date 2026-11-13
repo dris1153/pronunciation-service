@@ -66,3 +66,27 @@ async def test_v2_unavailable_model_returns_503(app, client: AsyncClient, sample
         files={"audio": ("t.wav", io.BytesIO(sample_audio_bytes), "audio/wav")},
     )
     assert resp.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_v2_empty_model_dir_returns_503_without_mocking(app, client: AsyncClient, sample_audio_bytes, tmp_path, monkeypatch):
+    """A real directory with no model files must degrade to 503, not crash (onnxruntime raises its own error type)."""
+    from app.core.config import get_settings
+    from app.services.v2.analyser import get_v2_analyser
+    from app.services.v2.pronunciation_v2_service import get_pronunciation_v2_service
+
+    monkeypatch.setenv("PHONE_MODEL_DIR", str(tmp_path))
+    for cached in (get_settings, get_v2_analyser, get_pronunciation_v2_service):
+        cached.cache_clear()
+    app.dependency_overrides.pop(get_pronunciation_v2_svc, None)
+    try:
+        resp = await client.post(
+            "/api/v2/evaluate",
+            data={"reference_text": "a"},
+            files={"audio": ("t.wav", io.BytesIO(sample_audio_bytes), "audio/wav")},
+        )
+        assert resp.status_code == 503
+    finally:
+        monkeypatch.undo()
+        for cached in (get_settings, get_v2_analyser, get_pronunciation_v2_service):
+            cached.cache_clear()

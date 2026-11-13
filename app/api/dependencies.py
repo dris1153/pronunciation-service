@@ -90,6 +90,6 @@ async def get_pronunciation_v2_svc() -> PronunciationV2Service:
     """FastAPI dependency for the v2 service; 503 when the phone model files are absent."""
     try:
         return get_pronunciation_v2_service()
-    except FileNotFoundError as exc:
-        logger.error("v2 model files missing: {}", exc)
+    except Exception as exc:  # noqa: BLE001 - missing or corrupt model files
+        logger.error("v2 model unavailable: {!r}", exc)
         raise HTTPException(status_code=503, detail="v2 model is not available on this server.")

@@ -63,15 +63,25 @@ def analyse_posteriors(
     words: list[tuple[str, list[str]]],
     vocab: list[str],
 ) -> V2Analysis:
-    """``words`` = ``(word, canonical phones)``; phones outside ``vocab`` are dropped."""
+    """``words`` = ``(word, canonical phones)``; phones outside ``vocab`` are dropped.
+
+    Words left with no phone (e.g. a lone apostrophe) are omitted from the result.
+    Raises ValueError when nothing pronounceable remains or the audio is too short.
+    """
     phone_to_id = {p: i for i, p in enumerate(vocab)}
     analysed = [
         WordAnalysis(w, [PhoneAnalysis(p) for p in phones if p in phone_to_id]) for w, phones in words
     ]
+    analysed = [w for w in analysed if w.phones]
+    if not analysed:
+        raise ValueError("reference_text has no pronounceable words.")
     flat = [(wi, ph) for wi, w in enumerate(analysed) for ph in w.phones]
     targets = [phone_to_id[ph.expected] for _, ph in flat]
 
-    spans = forced_align(log_probs, targets, BLANK_ID)
+    try:
+        spans = forced_align(log_probs, targets, BLANK_ID)
+    except ValueError as exc:
+        raise ValueError("Audio is too short for the reference text.") from exc
     for k, ((_, ph), span) in enumerate(zip(flat, spans)):
         ph.start, ph.end = span
         ph.timing_end = spans[k + 1][0] if k + 1 < len(spans) else span[1]
@@ -80,7 +90,9 @@ def analyse_posteriors(
 
     heard = [vocab[i] for i in greedy_decode(log_probs)]
     pos, last_word = 0, 0
-    for op, _, act in _align_phonemes([ph.expected for _, ph in flat], heard):
+    expected = [ph.expected for _, ph in flat]
+    # the default 200-phone cap would mark the tail of a long reference as deleted
+    for op, _, act in _align_phonemes(expected, heard, max_phonemes=max(len(expected), len(heard))):
         if op == _INSERT:
             analysed[last_word].inserted.append(act)
             continue

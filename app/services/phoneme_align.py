@@ -86,6 +86,7 @@ _MAX_ALIGN_PHONEMES = 200
 def _align_phonemes(
     ref: Sequence[str],
     act: Sequence[str],
+    max_phonemes: int = _MAX_ALIGN_PHONEMES,
 ) -> list[tuple[str, str, str]]:
     """Align two IPA phoneme sequences using Levenshtein DP with phonetic
     similarity costs.
@@ -99,20 +100,20 @@ def _align_phonemes(
     n, m = len(ref), len(act)
 
     # Guard: truncate excessively long phoneme sequences.
-    if n > _MAX_ALIGN_PHONEMES:
+    if n > max_phonemes:
         logger.warning(
             "Ref phonemes truncated from {} to {} for DP alignment",
-            n, _MAX_ALIGN_PHONEMES,
+            n, max_phonemes,
         )
-        ref = ref[:_MAX_ALIGN_PHONEMES]
-        n = _MAX_ALIGN_PHONEMES
-    if m > _MAX_ALIGN_PHONEMES:
+        ref = ref[:max_phonemes]
+        n = max_phonemes
+    if m > max_phonemes:
         logger.warning(
             "Act phonemes truncated from {} to {} for DP alignment",
-            m, _MAX_ALIGN_PHONEMES,
+            m, max_phonemes,
         )
-        act = act[:_MAX_ALIGN_PHONEMES]
-        m = _MAX_ALIGN_PHONEMES
+        act = act[:max_phonemes]
+        m = max_phonemes
 
     # Cost matrix (n+1) × (m+1) — use float64 for precision
     dp = np.zeros((n + 1, m + 1), dtype=np.float64)

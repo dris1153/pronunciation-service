@@ -53,3 +53,26 @@ def test_inserted_phone_attaches_to_preceding_word():
 def test_phones_outside_vocab_are_dropped():
     res = analyse_posteriors(_posteriors(["a"]), [("a?", ["a", "?"])], VOCAB)
     assert [p.expected for p in res.words[0].phones] == ["a"]
+
+
+def test_zero_phone_words_are_dropped_and_empty_reference_rejected():
+    import pytest
+
+    res = analyse_posteriors(_posteriors(["a", "b"]), [("'", ["?"]), ("ab", ["a", "b"])], VOCAB)
+    assert [w.word for w in res.words] == ["ab"]
+    with pytest.raises(ValueError, match="no pronounceable"):
+        analyse_posteriors(_posteriors(["a"]), [("!!", [])], VOCAB)
+
+
+def test_audio_too_short_for_reference_is_a_user_error():
+    import pytest
+
+    with pytest.raises(ValueError, match="too short"):
+        analyse_posteriors(_posteriors(["a"], frames_per=1, gap=0), [("abab", ["a", "b", "a", "b"])], VOCAB)
+
+
+def test_long_reference_beyond_200_phones_keeps_every_phone_heard():
+    seq = ["a", "b", "c", "d"] * 70  # 280 phones, every one spoken
+    res = analyse_posteriors(_posteriors(seq, frames_per=2, gap=1), [("w", seq)], VOCAB)
+    phones = res.words[0].phones
+    assert len(phones) == 280 and all(p.heard == p.expected for p in phones)

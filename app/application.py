@@ -129,8 +129,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         from app.services.v2.pronunciation_v2_service import get_pronunciation_v2_service
 
         get_pronunciation_v2_service()
-    except FileNotFoundError as exc:
-        logger.warning("v2 model not found, /api/v2 will return 503: {}", exc)
+    except Exception as exc:  # noqa: BLE001 - a missing/corrupt v2 model must never take v1 down
+        logger.warning("v2 model unavailable, /api/v2 will return 503: {!r}", exc)
     logger.info("All models loaded ✓")
 
     # Warn early if ffmpeg is missing — required for MP3/OGG/WebM decoding
