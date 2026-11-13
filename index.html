@@ -660,6 +660,7 @@
         <p class="nav-group-title" data-i18n="nav_grp_api">API</p>
         <a href="#api-reference" data-i18n="nav_apiref">API Reference</a>
         <a class="sub" href="#ep-evaluate">POST /evaluate</a>
+        <a class="sub" href="#ep-evaluate-v2">POST /v2/evaluate</a>
         <a class="sub" href="#ep-transcribe">POST /transcribe</a>
         <a class="sub" href="#ep-text-analysis">GET /text-analysis</a>
         <a class="sub" href="#ep-model-info">GET /model-info</a>
@@ -715,11 +716,17 @@
       <ul>
         <li><strong data-i18n="s1_ts_web">Web:</strong> FastAPI 0.115 + Uvicorn (single worker)</li>
         <li><strong data-i18n="s1_ts_model">ASR model:</strong> facebook/wav2vec2-base-960h (CPU-only build)</li>
+        <li><strong data-i18n="s1_ts_v2">v2 phone model:</strong> HuBERT-base phone CTC, ONNX Runtime INT8, learned scorer (no PyTorch)</li>
         <li><strong data-i18n="s1_ts_ipa">IPA:</strong> g2p_en + ARPAbet → IPA mapping</li>
         <li><strong data-i18n="s1_ts_audio">Audio:</strong> librosa, soundfile, ffmpeg</li>
         <li><strong data-i18n="s1_ts_auth">Auth:</strong> X-API-Key + optional X-Service-Auth (per-user mode)</li>
         <li><strong data-i18n="s1_ts_deploy">Deploy:</strong> Coolify self-host via Nixpacks (or Docker)</li>
       </ul>
+
+      <div class="callout success">
+        <strong data-i18n="s1_v2_t">New: v2 pipeline</strong>
+        <span data-i18n-html="s1_v2_b">A phoneme-level pipeline is available at <code>POST /api/v2/evaluate</code> with the same request and response shape plus word timing. It scores each expected phone with a phone CTC model and a learned scorer: phone-score correlation with experts 0.63 (v1: 0.03), 125 ms vs 381 ms per 3.4 s clip on 4 vCPU. Measured on Mandarin-L1 speakers only. See <a href="#ep-evaluate-v2">the endpoint</a>.</span>
+      </div>
 
       <div class="callout">
         <strong data-i18n="s1_callout_t">Audience</strong>
@@ -1230,6 +1237,51 @@ Level: EXCELLENT (≥ 80)  ✓</code></pre>
         </div>
       </div>
 
+      <!-- /v2/evaluate -->
+      <div class="endpoint" id="ep-evaluate-v2">
+        <div class="endpoint-head">
+          <span class="method post">POST</span>
+          <span class="path">/api/v2/evaluate</span>
+          <span class="auth required" data-i18n="auth_required">API key required</span>
+        </div>
+        <div class="endpoint-body">
+          <p data-i18n-html="ep_eval2_d">Same request, auth, rate limit and error codes as <code>/api/v1/evaluate</code>. The response has the v1 shape plus word timing; scores come from a phoneme-level model and a learned scorer.</p>
+
+          <h4 data-i18n="ep_eval2_diff_h">Differences from v1</h4>
+          <table>
+            <thead><tr><th>Field</th><th>v2 behaviour</th></tr></thead>
+            <tbody>
+              <tr><td><code>word_details[].start_ms</code> / <code>end_ms</code></td><td>New: word position in the audio (ms).</td></tr>
+              <tr><td><code>transcribed_text</code></td><td>The heard IPA string, not words (no word ASR).</td></tr>
+              <tr><td><code>phoneme_details[].is_correct_ipa</code></td><td>Learned verdict (phone score &lt; 1.48 of 2), not <code>actual_ipa == expected_ipa</code>. 18% of phones are heard differently yet accepted (accent-neutral variants).</td></tr>
+              <tr><td><code>accuracy / fluency / prosody / overall</code></td><td>Learned, mapped through one stricter curve <code>100·(s/10)^1.4</code>; not comparable with v1 numbers.</td></tr>
+              <tr><td><code>completeness_score</code></td><td>Share of expected phones that were heard.</td></tr>
+              <tr><td>No speech</td><td>Silence, noise or fewer than 20% of expected phones heard returns the zero-score response.</td></tr>
+              <tr><td>Model files missing</td><td><span class="status s5xx">503</span> on this endpoint only; v1 keeps working.</td></tr>
+            </tbody>
+          </table>
+
+          <h4 data-i18n="ep_h4_response">Response (200)</h4>
+          <pre><code>{
+  "reference_text": "hello world",
+  "transcribed_text": "jɛloʊ wɝd",
+  "accuracy_score": 57.26, "fluency_score": 74.69,
+  "prosody_score": 68.98, "completeness_score": 87.5,
+  "overall_score": 55.8, "level": "fair",
+  "results": {
+    "word_details": [
+      { "word": "hello", "expected_ipa": "həloʊ", "actual_ipa": "jɛloʊ",
+        "start_ms": 160, "end_ms": 440, "error_type": "Mispronunciation",
+        "phoneme_details": [
+          { "expected_ipa": "h", "actual_ipa": "j", "is_correct_ipa": false,
+            "gop_score": 67.56, "gop_quality": "good" } /* ... */ ] }
+    ]
+  }
+}</code></pre>
+          <p data-i18n-html="ep_eval2_note_b">Abridged real output for a synthetic "yellow word" clip. Full reference: <code>docs/api.md</code> and <code>docs/scoring-v2.md</code> in the source repo.</p>
+        </div>
+      </div>
+
       <!-- /transcribe -->
       <div class="endpoint" id="ep-transcribe">
         <div class="endpoint-head">
@@ -1559,10 +1611,16 @@ async def evaluate(audio: bytes, reference_text: str, user_id: str) -&gt; dict:
         <tbody>
           <tr><td>CPU</td><td>2 vCPU</td><td>4 vCPU</td></tr>
           <tr><td>RAM</td><td>1.5 GB (base model)</td><td>3 GB (large model)</td></tr>
+          <tr><td>RAM with v2</td><td>2 GB (v1 + v2 INT8 together: ~1 GB after load)</td><td>—</td></tr>
           <tr><td>Disk</td><td>500 MB (image + model cache)</td><td>2 GB</td></tr>
           <tr><td>System packages</td><td><code>ffmpeg</code>, <code>libsndfile1</code>, <code>util-linux</code> (for prlimit)</td><td>—</td></tr>
         </tbody>
       </table>
+
+      <div class="callout">
+        <strong data-i18n="s8_v2_t">v2 model files</strong>
+        <span data-i18n-html="s8_v2_b">The v2 files (<code>model.int8.onnx</code>, <code>vocab.json</code>, <code>scorer.json</code>) come from a private Hugging Face repo at build time: set <code>V2_MODEL_REPO</code> and <code>HF_TOKEN</code> as build variables. Without them <code>/api/v2/evaluate</code> returns 503 and v1 is unaffected. See <code>docs/deployment.md</code>.</span>
+      </div>
 
       <h3 data-i18n="s8_envvars_h">Environment variables (reference)</h3>
       <table>
@@ -1841,7 +1899,7 @@ curl http://localhost:8000/api/v1/model-info | jq</code></pre>
         s4_source_t: 'Source of truth',
         s4_source_b: 'Numeric example values mirror <code>README.md</code>\'s scoring example. For implementation details see <code>app/services/pronunciation_service.py</code>; for constants rationale see <code>docs/scoring-constants.md</code>.',
         // Section 5 extras
-        s5_lead: 'All endpoints live under <code>/api/v1/*</code> except <code>/health</code>. Protected endpoints require <code>X-API-Key</code>. JSON responses unless stated otherwise.',
+        s5_lead: 'All endpoints live under <code>/api/v1/*</code> and <code>/api/v2/evaluate</code>, except <code>/health</code>. Protected endpoints require <code>X-API-Key</code>. JSON responses unless stated otherwise.',
         ep_h4_request: 'Request (multipart/form-data)',
         ep_h4_response: 'Response (200)',
         ep_h4_errors: 'Errors',
@@ -1889,6 +1947,14 @@ curl http://localhost:8000/api/v1/model-info | jq</code></pre>
         // Footer
         footer_p1: 'Pronunciation Validation Service — single-page developer docs.',
         footer_p2: 'Source of truth: <code>README.md</code> and <code>docs/*.md</code> in the project repository. When those change, sync this file.',
+        s1_ts_v2: 'v2 phone model:',
+        s1_v2_t: 'New: v2 pipeline',
+        s1_v2_b: 'A phoneme-level pipeline is available at <code>POST /api/v2/evaluate</code> with the same request and response shape plus word timing. It scores each expected phone with a phone CTC model and a learned scorer: phone-score correlation with experts 0.63 (v1: 0.03), 125 ms vs 381 ms per 3.4 s clip on 4 vCPU. Measured on Mandarin-L1 speakers only. See <a href="#ep-evaluate-v2">the endpoint</a>.',
+        ep_eval2_d: 'Same request, auth, rate limit and error codes as <code>/api/v1/evaluate</code>. The response has the v1 shape plus word timing; scores come from a phoneme-level model and a learned scorer.',
+        ep_eval2_diff_h: 'Differences from v1',
+        ep_eval2_note_b: 'Abridged real output for a synthetic "yellow word" clip. Full reference: <code>docs/api.md</code> and <code>docs/scoring-v2.md</code> in the source repo.',
+        s8_v2_t: 'v2 model files',
+        s8_v2_b: 'The v2 files (<code>model.int8.onnx</code>, <code>vocab.json</code>, <code>scorer.json</code>) come from a private Hugging Face repo at build time: set <code>V2_MODEL_REPO</code> and <code>HF_TOKEN</code> as build variables. Without them <code>/api/v2/evaluate</code> returns 503 and v1 is unaffected. See <code>docs/deployment.md</code>.',
         // Final pass extras
         s4_step1: 'Step 1 — Per-word IPA alignment',
         s4_step2: 'Step 2 — GOP scoring (CTC log-prob normalised)',
@@ -1982,7 +2048,7 @@ curl http://localhost:8000/api/v1/model-info | jq</code></pre>
         s4_source_t: 'Source of truth',
         s4_source_b: 'Số liệu trong ví dụ khớp với scoring example trong <code>README.md</code>. Chi tiết implementation xem <code>app/services/pronunciation_service.py</code>; lý do về constants xem <code>docs/scoring-constants.md</code>.',
         // Section 5 extras
-        s5_lead: 'Tất cả endpoint nằm dưới <code>/api/v1/*</code> ngoại trừ <code>/health</code>. Endpoint protected cần <code>X-API-Key</code>. JSON response trừ khi nói khác.',
+        s5_lead: 'Tất cả endpoint nằm dưới <code>/api/v1/*</code> và <code>/api/v2/evaluate</code>, ngoại trừ <code>/health</code>. Endpoint protected cần <code>X-API-Key</code>. JSON response trừ khi nói khác.',
         ep_h4_request: 'Request (multipart/form-data)',
         ep_h4_response: 'Response (200)',
         ep_h4_errors: 'Lỗi',
@@ -2030,6 +2096,14 @@ curl http://localhost:8000/api/v1/model-info | jq</code></pre>
         // Footer
         footer_p1: 'Pronunciation Validation Service — docs developer single-page.',
         footer_p2: 'Source of truth: <code>README.md</code> và <code>docs/*.md</code> trong project repo. Khi những file đó update, hãy sync trang này.',
+        s1_ts_v2: 'Mô hình phone v2:',
+        s1_v2_t: 'Mới: pipeline v2',
+        s1_v2_b: 'Pipeline mức phoneme có tại <code>POST /api/v2/evaluate</code>, cùng request/response với v1 và thêm thời gian từng từ. Mỗi phone kỳ vọng được chấm bằng mô hình phone CTC và bộ chấm học từ dữ liệu: tương quan điểm phone với chuyên gia 0.63 (v1: 0.03), 125 ms so với 381 ms cho clip 3.4 s trên 4 vCPU. Mới đo trên người nói tiếng Trung. Xem <a href="#ep-evaluate-v2">endpoint</a>.',
+        ep_eval2_d: 'Cùng request, auth, rate limit và mã lỗi với <code>/api/v1/evaluate</code>. Response giữ shape của v1 và thêm thời gian từng từ; điểm đến từ mô hình mức phoneme và bộ chấm học từ dữ liệu.',
+        ep_eval2_diff_h: 'Khác biệt so với v1',
+        ep_eval2_note_b: 'Output thật rút gọn cho clip tổng hợp "yellow word". Tham chiếu đầy đủ: <code>docs/api.md</code> và <code>docs/scoring-v2.md</code> trong source repo.',
+        s8_v2_t: 'File model v2',
+        s8_v2_b: 'Các file v2 (<code>model.int8.onnx</code>, <code>vocab.json</code>, <code>scorer.json</code>) được tải từ repo Hugging Face private lúc build: đặt <code>V2_MODEL_REPO</code> và <code>HF_TOKEN</code> làm build variable. Thiếu thì <code>/api/v2/evaluate</code> trả 503, v1 không bị ảnh hưởng. Xem <code>docs/deployment.md</code>.',
         // Final pass extras
         s4_step1: 'Bước 1 — Căn chỉnh IPA theo từng từ',
         s4_step2: 'Bước 2 — Chấm điểm GOP (chuẩn hoá CTC log-prob)',
@@ -2123,7 +2197,7 @@ curl http://localhost:8000/api/v1/model-info | jq</code></pre>
         s4_source_t: '权威来源',
         s4_source_b: '示例数值与 <code>README.md</code> 中的评分示例一致。实现细节参见 <code>app/services/pronunciation_service.py</code>；常量取值依据参见 <code>docs/scoring-constants.md</code>。',
         // Section 5 extras
-        s5_lead: '所有端点位于 <code>/api/v1/*</code>，<code>/health</code> 除外。受保护端点需要 <code>X-API-Key</code>。除非另行说明均返回 JSON。',
+        s5_lead: '所有端点位于 <code>/api/v1/*</code> 和 <code>/api/v2/evaluate</code>，<code>/health</code> 除外。受保护端点需要 <code>X-API-Key</code>。除非另行说明均返回 JSON。',
         ep_h4_request: '请求 (multipart/form-data)',
         ep_h4_response: '响应 (200)',
         ep_h4_errors: '错误',
@@ -2171,6 +2245,14 @@ curl http://localhost:8000/api/v1/model-info | jq</code></pre>
         // Footer
         footer_p1: 'Pronunciation Validation Service — 单页开发者文档。',
         footer_p2: '权威来源：项目仓库中的 <code>README.md</code> 与 <code>docs/*.md</code>。当那些文件变化时，请同步更新此文件。',
+        s1_ts_v2: 'v2 音素模型:',
+        s1_v2_t: '新增：v2 流水线',
+        s1_v2_b: '音素级流水线位于 <code>POST /api/v2/evaluate</code>，请求与响应格式与 v1 相同，并增加每个单词的时间。它用音素 CTC 模型和学习得到的评分器对每个预期音素评分：音素分数与专家评分的相关系数为 0.63（v1：0.03），在 4 vCPU 上处理 3.4 秒音频为 125 毫秒（v1：381 毫秒）。目前仅在母语为汉语的说话人上测得。参见<a href="#ep-evaluate-v2">该端点</a>。',
+        ep_eval2_d: '请求、认证、限流和错误码与 <code>/api/v1/evaluate</code> 相同。响应保持 v1 的结构并增加单词时间；分数来自音素级模型和学习得到的评分器。',
+        ep_eval2_diff_h: '与 v1 的差异',
+        ep_eval2_note_b: '合成音频 "yellow word" 的真实输出（已精简）。完整参考：源代码仓库中的 <code>docs/api.md</code> 与 <code>docs/scoring-v2.md</code>。',
+        s8_v2_t: 'v2 模型文件',
+        s8_v2_b: 'v2 文件（<code>model.int8.onnx</code>、<code>vocab.json</code>、<code>scorer.json</code>）在构建时从私有 Hugging Face 仓库下载：请将 <code>V2_MODEL_REPO</code> 和 <code>HF_TOKEN</code> 设为构建变量。缺失时 <code>/api/v2/evaluate</code> 返回 503，v1 不受影响。参见 <code>docs/deployment.md</code>。',
         // Final pass extras
         s4_step1: '步骤 1 — 逐词 IPA 对齐',
         s4_step2: '步骤 2 — GOP 评分（CTC 对数概率归一化）',
