@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
+from app.core.concurrency import torch_threads_per_slot  # pure CPU math despite the name
 from app.core.config import get_settings
 from app.services.ipa_service import get_ipa_service
 from app.services.v2.gop_features import V2Analysis, analyse_posteriors
@@ -14,8 +15,8 @@ from app.utils.text import text_to_words
 
 
 class V2Analyser:
-    def __init__(self, model_dir: Path) -> None:
-        self._model = PhoneModel(model_dir)
+    def __init__(self, model_dir: Path, int8: bool = False, threads: int = 0) -> None:
+        self._model = PhoneModel(model_dir, int8, threads)
         self._ipa = get_ipa_service()
 
     def analyse(self, waveform: np.ndarray, reference_text: str) -> V2Analysis:
@@ -25,4 +26,5 @@ class V2Analyser:
 
 @lru_cache(maxsize=1)
 def get_v2_analyser() -> V2Analyser:
-    return V2Analyser(Path(get_settings().phone_model_dir))
+    settings = get_settings()
+    return V2Analyser(Path(settings.phone_model_dir), settings.phone_model_int8, torch_threads_per_slot())

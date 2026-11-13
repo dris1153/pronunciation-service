@@ -3,6 +3,11 @@
     python -m training.export_onnx --model data/models/hubert-phone-ctc
 
 Writes model.onnx next to the checkpoint. vocab.json is already there.
+
+    python -m training.export_onnx --int8
+
+quantizes the existing model.onnx to model.int8.onnx (dynamic INT8, MatMul only:
+the conv front-end gains nothing from dynamic quantization) instead of exporting.
 """
 from __future__ import annotations
 
@@ -25,11 +30,23 @@ class _Logits(torch.nn.Module):
         return self.model(wave).logits
 
 
+def quantize(model_dir: Path) -> None:
+    from onnxruntime.quantization import QuantType, quantize_dynamic
+
+    src, dst = model_dir / "model.onnx", model_dir / "model.int8.onnx"
+    quantize_dynamic(str(src), str(dst), weight_type=QuantType.QInt8, op_types_to_quantize=["MatMul"])
+    print(f"wrote {dst} ({src.stat().st_size / 2**20:.0f} -> {dst.stat().st_size / 2**20:.0f} MB)")
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--model", type=Path, default=ROOT / "data" / "models" / "hubert-phone-ctc")
     p.add_argument("--opset", type=int, default=17)
+    p.add_argument("--int8", action="store_true", help="quantize the existing model.onnx")
     args = p.parse_args()
+    if args.int8:
+        quantize(args.model)
+        return
 
     model = HubertForCTC.from_pretrained(args.model).eval()
     wrapped = _Logits(model).eval()

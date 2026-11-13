@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     device: str = "cpu"  # "cpu" | "cuda"
     # v2 phone CTC model: directory with model.onnx + vocab.json
     phone_model_dir: str = "./data/models/hubert-phone-ctc"
+    phone_model_int8: bool = True  # model.int8.onnx (dynamic INT8, PCC drop <= 0.01); False = model.onnx FP32
 
     # ── Audio ────────────────────────────────────────────────
     audio_sample_rate: int = 16000

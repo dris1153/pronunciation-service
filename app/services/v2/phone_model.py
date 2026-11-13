@@ -13,12 +13,14 @@ FRAME_MS = 20  # HuBERT conv stride: 320 samples @ 16 kHz
 
 
 class PhoneModel:
-    def __init__(self, model_dir: Path, intra_op_threads: int = 0) -> None:
+    def __init__(self, model_dir: Path, int8: bool = False, intra_op_threads: int = 0) -> None:
         opts = ort.SessionOptions()
         opts.intra_op_num_threads = intra_op_threads
-        self._sess = ort.InferenceSession(
-            str(model_dir / "model.onnx"), opts, providers=["CPUExecutionProvider"]
-        )
+        opts.inter_op_num_threads = 1
+        opts.enable_mem_pattern = False  # input length differs per request
+        opts.enable_cpu_mem_arena = True
+        name = "model.int8.onnx" if int8 else "model.onnx"
+        self._sess = ort.InferenceSession(str(model_dir / name), opts, providers=["CPUExecutionProvider"])
         self.vocab: list[str] = json.loads((model_dir / "vocab.json").read_text(encoding="utf-8"))
         self.phone_to_id = {p: i for i, p in enumerate(self.vocab)}
 
