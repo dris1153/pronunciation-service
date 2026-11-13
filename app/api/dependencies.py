@@ -9,6 +9,7 @@ from loguru import logger
 
 from app.core.config import get_settings
 from app.services.pronunciation_service import PronunciationService, get_pronunciation_service
+from app.services.v2.pronunciation_v2_service import PronunciationV2Service, get_pronunciation_v2_service
 
 # ---------------------------------------------------------------------------
 # API Key authentication
@@ -83,3 +84,12 @@ async def verify_api_key(api_key: str | None = Security(_api_key_header)) -> Non
 async def get_pronunciation_svc() -> PronunciationService:
     """FastAPI dependency that returns the singleton PronunciationService."""
     return get_pronunciation_service()
+
+
+async def get_pronunciation_v2_svc() -> PronunciationV2Service:
+    """FastAPI dependency for the v2 service; 503 when the phone model files are absent."""
+    try:
+        return get_pronunciation_v2_service()
+    except FileNotFoundError as exc:
+        logger.error("v2 model files missing: {}", exc)
+        raise HTTPException(status_code=503, detail="v2 model is not available on this server.")

@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def test_v2_modules_do_not_import_torch():
     code = (
         "import sys\n"
-        "import app.services.v2.analyser, app.services.v2.scorer\n"
+        "import app.services.v2.pronunciation_v2_service, app.services.v2.scorer\n"
         "bad = sorted(m for m in sys.modules if m.split('.')[0] in ('torch', 'torchaudio', 'transformers'))\n"
         "assert not bad, bad\n"
     )

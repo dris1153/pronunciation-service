@@ -16,6 +16,7 @@ from app.api.routes import (
     ipa_router,
     model_info_router,
     pronunciation_router,
+    pronunciation_v2_router,
     transcribe_router,
 )
 from app.core.config import get_settings
@@ -124,6 +125,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     get_ipa_service()
     get_gop_service()
     get_prosody_service()
+    try:
+        from app.services.v2.pronunciation_v2_service import get_pronunciation_v2_service
+
+        get_pronunciation_v2_service()
+    except FileNotFoundError as exc:
+        logger.warning("v2 model not found, /api/v2 will return 503: {}", exc)
     logger.info("All models loaded ✓")
 
     # Warn early if ffmpeg is missing — required for MP3/OGG/WebM decoding
@@ -163,6 +170,7 @@ def create_app() -> FastAPI:
     # Register routers
     app.include_router(health_router)
     app.include_router(pronunciation_router)
+    app.include_router(pronunciation_v2_router)
     app.include_router(ipa_router)
     app.include_router(transcribe_router)
     app.include_router(model_info_router)

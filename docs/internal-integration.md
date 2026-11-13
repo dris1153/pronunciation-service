@@ -273,3 +273,15 @@ TRUSTED_PROXY_CIDRS_STR=172.18.0.0/16
 ## 9. Backward compatibility
 
 Leaving `SERVICE_API_KEY=""` on this service **disables** per-user keying — all callers fall back to per-IP rate limiting (existing behaviour). Safe to roll out the service-side change first; backends adopt the headers when ready.
+
+---
+
+## 10. Switching a client to `/api/v2/evaluate`
+
+Request, auth, rate limit and error codes are identical to v1; only point the client at `/api/v2/evaluate`. Before switching check what changes for your UI:
+
+- `transcribed_text` is the heard IPA string (e.g. `jɛloʊ wɝd`), not the recognised words. Don't render it as a sentence.
+- `is_correct_ipa` is a learned verdict; a phone can be heard as a different symbol (`actual_ipa`) and still be accepted (accent-neutral variants), or heard correctly and flagged.
+- New per-word `start_ms` / `end_ms` for highlighting in a player.
+- Scores are on a different calibration than v1: do not compare v1 and v2 numbers or reuse thresholds. Calibrated against speechocean762 (Mandarin L1); Vietnamese-L1 accuracy has not been measured yet.
+- 503 with `v2 model is not available on this server.` means the image was built without the v2 files.

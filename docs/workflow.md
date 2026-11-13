@@ -94,6 +94,12 @@ Client                  FastAPI                PronunciationService        ASR /
 
 ---
 
+### v2 request flow (POST /api/v2/evaluate)
+
+Same validation, auth, rate limit and inference semaphore as v1 (`app/api/upload.py`), then, with no torch involved:
+audio decode → ONNX phone CTC (20 ms frames) → numpy CTC forced alignment → per-phone GOP features + heard phones → learned scorer
+(phone MLP → word/utterance ridge) → v1-shaped response with word timing. Break errors reuse the v1 pause rules on the aligned word spans.
+
 ## 3. Authentication Flow
 
 ```

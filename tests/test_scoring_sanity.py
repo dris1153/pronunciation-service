@@ -50,3 +50,28 @@ async def test_recording_within_band(recording_dir: Path, client):
     assert lo <= score <= hi, (
         f"{recording_dir.name}: score={score:.1f}, expected [{lo}, {hi}]"
     )
+
+
+def _v2_model_available() -> bool:
+    from app.core.config import get_settings
+
+    s = get_settings()
+    onnx = "model.int8.onnx" if s.phone_model_int8 else "model.onnx"
+    return all((Path(s.phone_model_dir) / f).exists() for f in (onnx, "vocab.json", "scorer.json"))
+
+
+@pytest.mark.skipif(
+    not _RECORDING_DIRS or not _v2_model_available(),
+    reason="Sanity dataset or v2 model files not available.",
+)
+@pytest.mark.parametrize("recording_dir", _RECORDING_DIRS, ids=lambda p: p.name)
+def test_recording_within_band_v2(recording_dir: Path):
+    from app.services.v2.pronunciation_v2_service import get_pronunciation_v2_service
+
+    audio = (recording_dir / "audio.wav").read_bytes()
+    ref = (recording_dir / "reference.txt").read_text(encoding="utf-8").strip()
+    expected = json.loads((recording_dir / "expected.json").read_text(encoding="utf-8"))
+
+    score = get_pronunciation_v2_service()._evaluate_sync(audio, ref).overall_score
+    lo, hi = expected["min_score"], expected["max_score"]
+    assert lo <= score <= hi, f"{recording_dir.name}: v2 score={score:.1f}, expected [{lo}, {hi}]"

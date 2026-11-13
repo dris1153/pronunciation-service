@@ -137,6 +137,7 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 | `GET /docs`                 | ❌ No         |
 | `GET /api/v1/model-info`    | ❌ No         |
 | `POST /api/v1/evaluate`     | ✅ Yes        |
+| `POST /api/v2/evaluate`     | ✅ Yes        |
 | `GET /api/v1/text-analysis` | ✅ Yes        |
 | `POST /api/v1/transcribe`   | ✅ Yes        |
 
@@ -315,6 +316,23 @@ Evaluate pronunciation quality. **Requires `X-API-Key` header.**
   "feedback": "Excellent pronunciation! Your speech closely matches the reference. Score: 87.5/100."
 }
 ```
+
+### `POST /api/v2/evaluate`
+
+Same request and response shape as `/api/v1/evaluate`, scored by a phoneme-level model (HuBERT-base phone CTC, ONNX INT8) and a learned scorer instead of word ASR + hand-tuned formulas. v1 is unchanged.
+
+Differences from v1:
+
+| Field | v2 behaviour |
+| --- | --- |
+| `results.word_details[].start_ms` / `end_ms` | **New.** Word position in the audio (ms). |
+| `transcribed_text` | The heard **IPA string**, not words (there is no word ASR). |
+| `phoneme_details[].is_correct_ipa` | Learned flag (phone score < 1.48/2), not `actual_ipa == expected_ipa`. `actual_ipa` is still the heard phone. |
+| `overall_score` | Learned total on a stricter curve (`100·(t/10)^1.4`); sub-scores are 10× the expert-scale predictions. |
+| `error_type` | `Omission` (all phones deleted), `Mispronunciation` (word score < 60), then `UnexpectedBreak` / `MissingBreak` as in v1. `Insertion` is never set on words (same as v1). |
+
+Needs `model.int8.onnx`, `vocab.json`, `scorer.json` in `PHONE_MODEL_DIR` (`PHONE_MODEL_INT8=false` uses `model.onnx`). Without them the endpoint returns **503** and v1 keeps working.
+Docker build: `docker build --build-arg V2_MODEL_REPO=<org>/<repo> --secret id=hf_token,env=HF_TOKEN .` (private Hugging Face repo; publish with `scripts/upload_v2_model.py`). Training/export: [training/README.md](training/README.md).
 
 ### `GET /api/v1/text-analysis`
 

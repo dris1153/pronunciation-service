@@ -163,6 +163,25 @@ class PronunciationResponse(BaseModel):
     feedback: str = Field(..., description="Human-readable feedback")
 
 
+# ── v2 (additive: same keys as v1 plus word timing) ──────────────────────────
+
+
+class WordResultV2(WordResult):
+    start_ms: int = Field(..., ge=0, description="Word start in the audio (ms)")
+    end_ms: int = Field(..., ge=0, description="Word end in the audio (ms)")
+
+
+class EvaluationResultV2(EvaluationResult):
+    word_details: list[WordResultV2] = Field(
+        default_factory=list, description="Per-word combined IPA + GOP analysis with timing"
+    )
+
+
+class PronunciationResponseV2(PronunciationResponse):
+    """v1 response shape. ``transcribed_text`` is the heard IPA string, not words."""
+    results: EvaluationResultV2 = Field(..., description="Combined IPA and GOP analysis")
+
+
 class HealthResponse(BaseModel):
     status: str = "ok"
     version: str

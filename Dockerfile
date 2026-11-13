@@ -52,7 +52,11 @@ ENV ASR_MODEL_NAME=${ASR_MODEL_NAME}
 # ----------------------------
 COPY download_model.py .
 
-RUN python download_model.py
+# v2 phone model: private HF repo. Pass the token as a BuildKit secret so it never lands in a layer:
+#   docker build --build-arg V2_MODEL_REPO=<org>/<repo> --secret id=hf_token,env=HF_TOKEN .
+ARG V2_MODEL_REPO=""
+ENV V2_MODEL_REPO=${V2_MODEL_REPO}
+RUN --mount=type=secret,id=hf_token,required=false     HF_TOKEN="$(cat /run/secrets/hf_token 2>/dev/null || true)" python download_model.py
 
 # ----------------------------
 # Runtime config
