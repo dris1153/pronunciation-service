@@ -58,7 +58,10 @@ COPY download_model.py .
 ARG V2_MODEL_REPO=""
 ENV V2_MODEL_REPO=${V2_MODEL_REPO}
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
-    if [ -f /run/secrets/HF_TOKEN ]; then export HF_TOKEN="$(cat /run/secrets/HF_TOKEN)"; fi; \
+    --mount=type=secret,id=V2_MODEL_REPO,required=false \
+    for v in HF_TOKEN V2_MODEL_REPO; do \
+      if [ -f "/run/secrets/$v" ]; then export "$v=$(cat "/run/secrets/$v")"; fi; \
+    done; \
     python download_model.py
 
 # ----------------------------
