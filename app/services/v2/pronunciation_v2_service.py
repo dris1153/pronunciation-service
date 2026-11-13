@@ -35,14 +35,15 @@ from app.services.v2.scorer import Scorer, Scores
 from app.utils.audio import is_silent, load_audio_from_bytes, validate_audio_duration
 from app.utils.text import text_to_words
 
-# The scorer predicts on the speechocean762 expert scale (mostly 6-10 out of 10). Raising the
-# total to this power moves it onto the stricter v1/Azure scale: poor sanity clips drop below 60
+# The scorer predicts on the speechocean762 expert scale (mostly 6-10 out of 10). Raising every
+# utterance-level score (accuracy, fluency, prosody, total) to this power moves it onto the stricter v1/Azure scale: poor sanity clips drop below 60
 # while good ones stay above 70 (1.3 left poor_001 at 59.4, too close to the line).
 SCORE_CURVE_EXPONENT = 1.4
 
 
-def remap_total(total_0_10: float) -> float:
-    return round(100.0 * (min(max(total_0_10, 0.0), 10.0) / 10.0) ** SCORE_CURVE_EXPONENT, 2)
+def remap_score(score_0_10: float) -> float:
+    """Expert-scale 0-10 prediction -> 0-100 on the stricter service scale."""
+    return round(100.0 * (min(max(score_0_10, 0.0), 10.0) / 10.0) ** SCORE_CURVE_EXPONENT, 2)
 
 
 def _clip100(x: float) -> float:
@@ -88,7 +89,7 @@ class PronunciationV2Service:
         n = max(1, len(phones))
         overall_gop = _clip100(sum(p.gop_score for p in phones) / n)
         actual_ipa = " ".join(w.actual_ipa for w in words)
-        total = remap_total(scores.utt["total"])
+        total = remap_score(scores.utt["total"])
         level = _level_from_score(total)
         results = EvaluationResultV2(
             reference_ipa=self._ipa.text_to_ipa(reference_text),
@@ -102,10 +103,10 @@ class PronunciationV2Service:
             reference_text=reference_text,
             transcribed_text=actual_ipa,
             results=results,
-            accuracy_score=_clip100(scores.utt["accuracy"] * 10),
+            accuracy_score=remap_score(scores.utt["accuracy"]),
             completeness_score=_clip100(scores.completeness * 10),
-            fluency_score=_clip100(scores.utt["fluency"] * 10),
-            prosody_score=_clip100(scores.utt["prosodic"] * 10),
+            fluency_score=remap_score(scores.utt["fluency"]),
+            prosody_score=remap_score(scores.utt["prosodic"]),
             overall_score=total,
             level=level,
             feedback=_build_feedback(level, total),

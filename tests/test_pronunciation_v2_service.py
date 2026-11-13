@@ -4,7 +4,7 @@ import numpy as np
 
 from app.models.schemas import ErrorType, PronunciationResponse, PronunciationResponseV2
 from app.services.v2.gop_features import PhoneAnalysis, V2Analysis, WordAnalysis
-from app.services.v2.pronunciation_v2_service import PronunciationV2Service, remap_total
+from app.services.v2.pronunciation_v2_service import PronunciationV2Service, remap_score
 from app.services.v2.scorer import Scores
 
 
@@ -29,10 +29,10 @@ def _scores(phone: list[list[float]], word: list[float], total: float = 7.0) -> 
     return Scores(phone, word, {"accuracy": 7.0, "fluency": 8.0, "prosodic": 6.0, "total": total}, 10.0)
 
 
-def test_remap_total_is_monotone_and_stricter():
-    assert remap_total(0) == 0 and remap_total(10) == 100
-    assert remap_total(6.7) < 60 < 70 < remap_total(8.0)
-    assert remap_total(5) < remap_total(6) < remap_total(7)
+def test_remap_score_is_monotone_and_stricter():
+    assert remap_score(0) == 0 and remap_score(10) == 100
+    assert remap_score(6.7) < 60 < 70 < remap_score(8.0)
+    assert remap_score(5) < remap_score(6) < remap_score(7)
 
 
 def test_is_correct_ipa_follows_scorer_flag_not_heard_phone():
@@ -71,8 +71,8 @@ def test_timing_and_headline_scores():
     words = [_word("a", [("a", "a")], 5), _word("b", [("b", "b")], 20)]
     resp = _service()._build_response("a b", V2Analysis(words, [], 40), _scores([[1.9], [1.9]], [9.0, 9.0], total=8.0))
     assert [(w.start_ms, w.end_ms) for w in resp.results.word_details] == [(100, 140), (400, 440)]
-    assert resp.overall_score == remap_total(8.0)
-    assert resp.accuracy_score == 70.0 and resp.fluency_score == 80.0 and resp.prosody_score == 60.0
+    assert resp.overall_score == remap_score(8.0)
+    assert (resp.accuracy_score, resp.fluency_score, resp.prosody_score) == (remap_score(7.0), remap_score(8.0), remap_score(6.0))
     assert resp.transcribed_text == resp.results.actual_ipa == "a b"
 
 

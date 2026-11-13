@@ -328,7 +328,7 @@ Differences from v1:
 | `results.word_details[].start_ms` / `end_ms` | **New.** Word position in the audio (ms). |
 | `transcribed_text` | The heard **IPA string**, not words (there is no word ASR). |
 | `phoneme_details[].is_correct_ipa` | Learned flag (phone score < 1.48/2), not `actual_ipa == expected_ipa`. `actual_ipa` is still the heard phone. |
-| `overall_score` | Learned total on a stricter curve (`100·(t/10)^1.4`); sub-scores are 10× the expert-scale predictions. |
+| `overall_score`, `accuracy_score`, `fluency_score`, `prosody_score` | Learned predictions mapped onto a stricter curve (`100·(s/10)^1.4`), the same for all four. `completeness_score` is the share of non-deleted phones. |
 | `error_type` | `Omission` (all phones deleted), `Mispronunciation` (word score < 60), then `UnexpectedBreak` / `MissingBreak` as in v1. `Insertion` is never set on words (same as v1). |
 
 Needs `model.int8.onnx`, `vocab.json`, `scorer.json` in `PHONE_MODEL_DIR` (`PHONE_MODEL_INT8=false` uses `model.onnx`). Without them the endpoint returns **503** and v1 keeps working.
