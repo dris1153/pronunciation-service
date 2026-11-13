@@ -40,6 +40,11 @@ from app.utils.text import text_to_words
 # while good ones stay above 70 (1.3 left poor_001 at 59.4, too close to the line).
 SCORE_CURVE_EXPONENT = 1.4
 
+# Noise or off-topic audio yields (almost) no decoded phones and the scorer extrapolates wildly
+# on such input. On the 2500 speechocean762 test utterances the lowest share of expected phones
+# that were heard is 0.31 (and those are human-scored ~0), so 0.2 never rejects real speech.
+MIN_HEARD_RATIO = 0.2
+
 
 def remap_score(score_0_10: float) -> float:
     """Expert-scale 0-10 prediction -> 0-100 on the stricter service scale."""
@@ -74,6 +79,11 @@ class PronunciationV2Service:
             return self._zero_score_response(reference_text)
 
         analysis = self._analyser.analyse(waveform, reference_text)
+        expected = sum(len(w.phones) for w in analysis.words)
+        if len(analysis.heard) < max(1, MIN_HEARD_RATIO * expected):
+            logger.warning("No speech evidence ({} phones heard, {} expected) — zero-score response",
+                           len(analysis.heard), expected)
+            return self._zero_score_response(reference_text)
         scores = self._scorer.score(analysis)
         response = self._build_response(reference_text, analysis, scores)
         logger.bind(stage_ms={"total": round((time.perf_counter() - start) * 1000, 1)}).info("evaluate_timing")

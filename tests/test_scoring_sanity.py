@@ -75,3 +75,20 @@ def test_recording_within_band_v2(recording_dir: Path):
     score = get_pronunciation_v2_service()._evaluate_sync(audio, ref).overall_score
     lo, hi = expected["min_score"], expected["max_score"]
     assert lo <= score <= hi, f"{recording_dir.name}: v2 score={score:.1f}, expected [{lo}, {hi}]"
+
+
+@pytest.mark.skipif(not _v2_model_available(), reason="v2 model files not available.")
+@pytest.mark.parametrize("seconds", [0.5, 3.0])
+def test_noise_gets_zero_score_v2(seconds: float):
+    import io
+
+    import numpy as np
+    import soundfile as sf
+
+    from app.services.v2.pronunciation_v2_service import get_pronunciation_v2_service
+
+    noise = np.random.default_rng(0).normal(0, 0.1, int(16000 * seconds)).astype(np.float32)
+    buf = io.BytesIO()
+    sf.write(buf, noise, 16000, format="WAV")
+    resp = get_pronunciation_v2_service()._evaluate_sync(buf.getvalue(), "hello world")
+    assert resp.overall_score == 0.0 and resp.completeness_score == 0.0

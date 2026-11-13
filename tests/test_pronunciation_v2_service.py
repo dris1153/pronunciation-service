@@ -84,3 +84,27 @@ def test_v2_json_is_superset_of_v1_keys():
     assert {"start_ms", "end_ms"} <= set(word)
     assert isinstance(resp, PronunciationResponseV2) and resp.overall_score == 0.0
     assert all(w.error_type == ErrorType.OMISSION for w in resp.results.word_details)
+
+
+def _evaluate(heard: list[str], monkeypatch) -> PronunciationResponseV2:
+    """Run _evaluate_sync with a stubbed analyser/audio so only the speech-evidence gate is exercised."""
+    import app.services.v2.pronunciation_v2_service as mod
+
+    words = [_word("ab", [("a", "a"), ("b", "b")], 0), _word("cd", [("a", "a"), ("b", "b")], 10)]
+    svc = _service()
+    svc._analyser.analyse.return_value = V2Analysis(words, heard, 30)
+    svc._scorer.score.return_value = _scores([[1.9, 1.9], [1.9, 1.9]], [9.0, 9.0])
+    monkeypatch.setattr(mod, "load_audio_from_bytes", lambda b: (np.ones(16000, dtype=np.float32), 16000))
+    monkeypatch.setattr(mod, "validate_audio_duration", lambda w, sr: None)
+    return svc._evaluate_sync(b"x", "ab cd")
+
+
+def test_no_decoded_phones_gives_zero_score_not_extrapolated_score(monkeypatch):
+    resp = _evaluate([], monkeypatch)
+    assert resp.overall_score == 0.0 and resp.completeness_score == 0.0
+    assert all(w.error_type == ErrorType.OMISSION for w in resp.results.word_details)
+
+
+def test_speech_with_enough_heard_phones_is_scored(monkeypatch):
+    # 4 expected phones, 1 heard (>= 20%): scored normally
+    assert _evaluate(["a"], monkeypatch).overall_score > 0.0
