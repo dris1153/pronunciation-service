@@ -1,3 +1,4 @@
+<!-- doc-id: docs-configuration | rev: e26350fb -->
 # Configuration
 
 All settings are environment variables (or entries in `.env`, resolved from the project root). Names are case-insensitive. The template is [`.env.example`](../.env.example); the source of truth is [`app/core/config.py`](../app/core/config.py).

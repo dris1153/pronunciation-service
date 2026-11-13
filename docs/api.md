@@ -1,3 +1,4 @@
+<!-- doc-id: docs-api | rev: 78459878 -->
 # API Reference
 
 Interactive docs: `GET /docs` (Swagger UI) and `GET /redoc`. This page is the written reference.

@@ -1,3 +1,4 @@
+<!-- doc-id: docs-training | rev: 948a85b2 -->
 # Training the v2 models
 
 Offline work lives in [`training/`](../training/) and never ships in the service image. It uses its own CUDA venv (`.venv-train`) so the service venv stays CPU-only. Quick command list: [training/README.md](../training/README.md). This page explains what is trained, on what, and why.

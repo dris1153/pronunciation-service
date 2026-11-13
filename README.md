@@ -1,3 +1,4 @@
+<!-- doc-id: readme | rev: 078fdfd7 -->
 <div align="center">
 
 # 🗣️ Pronunciation Validation Service
@@ -14,6 +15,8 @@ Upload a recording and the sentence the speaker should have said; get per-phone,
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 [Quick start](#-quick-start) · [API](#-api) · [How v2 works](#-how-v2-works) · [Results](#-results) · [Docs](#-documentation)
+
+**Languages:** [English](README.md) · [Tiếng Việt](languages/vi/README.md) · [中文](languages/zh/README.md) · [日本語](languages/ja/README.md) · [Español](languages/es/README.md)
 
 </div>
 
@@ -209,7 +212,7 @@ Tests that need the real v2 model files skip themselves when the files are absen
 
 ## 🤝 Contributing
 
-Keep files under about 200 lines, follow the existing structure (`docs/structure.md`), and run the tests before pushing. Changes to scoring need a before/after run of the speechocean762 harness ([docs/evaluation.md](docs/evaluation.md)).
+Keep files under about 200 lines, follow the existing structure (`docs/structure.md`), and run the tests before pushing. English docs are the source of truth for the translations in [`languages/`](languages/README.md): after editing one, run `python scripts/docs_sync.py bump` (rules in [AGENTS.md](AGENTS.md)). Changes to scoring need a before/after run of the speechocean762 harness ([docs/evaluation.md](docs/evaluation.md)).
 
 ## 📄 License and credits
 

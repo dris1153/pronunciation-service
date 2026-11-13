@@ -1,3 +1,4 @@
+<!-- doc-id: training-readme | rev: e36372fb -->
 # training/ — offline model training (Phase B)
 
 Not imported by `app/`. Uses its own CUDA venv so the service venv stays CPU-only.

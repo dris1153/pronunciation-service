@@ -1,3 +1,4 @@
+<!-- doc-id: docs-structure | rev: 6c7dadfe -->
 # Project Structure
 
 > Pronunciation Validation Service — directory layout & file descriptions

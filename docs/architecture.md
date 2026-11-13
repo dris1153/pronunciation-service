@@ -1,3 +1,4 @@
+<!-- doc-id: docs-architecture | rev: f54d8e3a -->
 # Architecture
 
 ## System overview

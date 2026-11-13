@@ -1,3 +1,4 @@
+<!-- doc-id: docs-scoring-v2 | rev: 4b5806b4 -->
 # Scoring v2 (phoneme-native pipeline)
 
 How `POST /api/v2/evaluate` scores speech. Instead of transcribing words and comparing text (v1), a phone-level CTC model scores each **expected** phone directly, and a small learned model turns those signals into expert-style scores.

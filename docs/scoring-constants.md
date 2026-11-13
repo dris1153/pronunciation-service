@@ -1,3 +1,4 @@
+<!-- doc-id: docs-scoring-constants | rev: 6006c067 -->
 # Scoring Constants Rationale
 
 Why each hardcoded scoring constant has the value it does. Bumping any of

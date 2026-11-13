@@ -1,3 +1,4 @@
+<!-- doc-id: docs-scoring-v1 | rev: f3f95227 -->
 # Scoring v1 (Wav2Vec2 ASR pipeline)
 
 How `POST /api/v1/evaluate` produces its scores: word ASR, g2p IPA references, CTC-posterior GOP, pitch prosody and Azure-style sub-scores.

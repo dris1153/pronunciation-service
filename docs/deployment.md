@@ -1,3 +1,4 @@
+<!-- doc-id: docs-deployment | rev: c9e42585 -->
 # Deployment
 
 One container serves both pipelines. v1 weights come from Hugging Face public repos; the v2 files (`model.int8.onnx`, `vocab.json`, `scorer.json`) come from a **private** Hugging Face repo. Both are baked into the image at build time (no persistent volumes needed).

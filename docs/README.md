@@ -1,3 +1,4 @@
+<!-- doc-id: docs-readme | rev: 0557f5e0 -->
 # Documentation
 
 | Page | What it covers |
@@ -16,3 +17,5 @@
 | [structure.md](structure.md) | Directory layout and per-file notes |
 
 Also: the bilingual single-page docs in [`index.html`](../index.html) and a project journal in [`journals/`](journals/).
+
+Translations (Tiếng Việt, 中文, 日本語, Español) live in [`../languages/`](../languages/README.md); [STATUS.md](../languages/STATUS.md) shows which ones are up to date with these English pages.
