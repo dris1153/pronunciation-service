@@ -71,6 +71,22 @@ If the comparator reports a deviation > 5pt or any tier flip, decide:
 
 ---
 
+## v2 constants (`app/services/v2/`)
+
+Sections 1-5 are v1 constants. The v2 pipeline has its own, mostly learned from data:
+
+| Constant | Value | Where | Why |
+| --- | --- | --- | --- |
+| `SCORE_CURVE_EXPONENT` | `1.4` | `pronunciation_v2_service.py` | Maps the expert-scale predictions (mostly 6-10) onto the stricter v1 scale: `100 x (s/10)^1.4`. 1.3 left `poor_001` at 59.4, too close to the 60 line. Tuned on 5 synthetic clips; recalibrate on real learner audio. Moves utterance correlations by <= 0.005 |
+| `MIN_HEARD_RATIO` | `0.2` | `pronunciation_v2_service.py` | Below 20% of expected phones heard, the audio is treated as no speech (zero score). Lowest share in real speechocean762 speech is 0.31 |
+| `mdd_threshold` | `1.48` (of 2) | `scorer.json` | Phone score below this means `is_correct_ipa = false`. Chosen to maximise mispronunciation F1 on out-of-fold train predictions |
+| `MIN_SAMPLES` | `400` | `phone_model.py` | The HuBERT conv front-end rejects shorter audio (25 ms) |
+| `Z_CLIP` | `10` | `scorer.py` | Rare-phone one-hots have tiny variance; unclipped z-scores reached ~200 and broke the fit |
+| Mispronunciation word threshold | `60` | `scoring_rules.py` | Shared with v1 (Azure uses the same) |
+| Break thresholds | `0.8 s` / `0.15 s` | `scoring_rules.py` | Shared with v1; v2 applies them to the aligned word spans |
+
+Changing the phone model, the feature layout or the phone inventory requires retraining `scorer.json` ([training.md](training.md)). Quality is checked with `scripts/speechocean762_eval.py --api v2` ([evaluation.md](evaluation.md)).
+
 ## How to update a constant safely
 
 1. Make the change in the relevant service file.

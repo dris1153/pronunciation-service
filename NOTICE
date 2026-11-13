@@ -1,0 +1,30 @@
+Pronunciation Validation Service
+Copyright 2026 dris1153
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+When you redistribute this software or a derivative work, keep this NOTICE file
+and the credits below.
+
+This product includes or builds on the following third-party work:
+
+Models
+- HuBERT Base (facebook/hubert-base-ls960), Apache-2.0, Meta AI. The v2 phone model
+  is a fine-tuned derivative of it.
+  Hsu et al., "HuBERT: Self-Supervised Speech Representation Learning by Masked
+  Prediction of Hidden Units", IEEE/ACM TASLP 2021.
+- Wav2Vec2 Base 960h (facebook/wav2vec2-base-960h), Apache-2.0, Meta AI. Used by the v1 pipeline.
+  Baevski et al., "wav2vec 2.0", NeurIPS 2020.
+
+Datasets (used for training and evaluation, not redistributed in this repository)
+- LibriSpeech (train-clean-100, dev-clean, test-clean), CC BY 4.0.
+  Panayotov, Chen, Povey, Khudanpur, "LibriSpeech: an ASR corpus based on public
+  domain audio books", ICASSP 2015. https://www.openslr.org/12
+- speechocean762, CC BY 4.0 (OpenSLR SLR101). Zhang et al., "speechocean762: An
+  Open-Source Non-native English Speech Corpus For Pronunciation Assessment",
+  Interspeech 2021. https://www.openslr.org/101
+
+Software
+- g2p_en (grapheme-to-phoneme), Apache-2.0, Kyubyong Park and Jongseok Kim.
+- Scoring ideas follow GOP (Witt and Young, 2000) and GOPT (Gong et al., ICASSP 2022);
+  the implementation in this repository is original.
+- Full list of runtime dependencies: requirements.txt (each under its own license).

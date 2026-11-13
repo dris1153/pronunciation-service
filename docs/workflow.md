@@ -1,6 +1,7 @@
 # Workflow & Request Flow
 
-> Pronunciation Validation Service — how requests flow, how auth works, how deployment is set up
+> Pronunciation Validation Service — how requests flow, how auth works, how deployment is set up.
+> Sections 1-2 describe the **v1** pipeline; diagrams for v1 vs v2, a v2 request sequence and startup are in [architecture.md](architecture.md).
 
 ---
 
@@ -79,7 +80,7 @@ Client                  FastAPI                PronunciationService        ASR /
 | #   | Step                     | Component              | Description                                                                                                                                                         |
 | --- | ------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | **Auth**                 | `dependencies.py`      | Validate `X-API-Key` header (skip if `API_KEY` is empty)                                                                                                            |
-| 2   | **Input validation**     | `pronunciation.py`     | Check audio content type, file size (≤25 MB) & non-empty reference text                                                                                             |
+| 2   | **Input validation**     | `pronunciation.py`     | Check audio content type, file size (≤10 MB) & non-empty reference text                                                                                             |
 | 3   | **Audio loading**        | `utils/audio.py`       | Decode audio bytes → 16 kHz mono float32 numpy array (librosa)                                                                                                      |
 | 4   | **Transcription**        | `ASRService`           | Wav2Vec2 model produces text from speech                                                                                                                            |
 | 5   | **Filler filtering**     | `utils/text.py`        | Strip disfluency words (uh, um, hmm…) via `filter_fillers(text_to_words(...))`                                                                                      |
@@ -214,79 +215,7 @@ Railway health check → GET /health
 
 ## 6. Scoring System
 
-### Accuracy Score
-
-The `accuracy_score` combines IPA phoneme accuracy and GOP scoring:
-
-### IPA Accuracy (55% of accuracy_score)
-
-```
-Reference text  ──▶  g2p_en  ──▶  IPA phonemes (expected)
-                                        │
-Transcription   ──▶  g2p_en  ──▶  IPA phonemes (actual)
-                                        │
-                                   Compare & align
-                                        │
-                                   accuracy = matched / total
-```
-
-### GOP Score (45% of accuracy_score)
-
-```
-Audio waveform  ──▶  is_silent()?  ──yes──▶  zero GOP scores (skip inference)
-                          │
-                          no
-                          │
-                     Wav2Vec2  ──▶  CTC log-posteriors (1, T, V)  [get_emission()]
-                                        │
-                              squeeze to (T, V) for _compute_phoneme_gop
-                                        │
-Reference text  ──▶  IPA  ──▶  Wav2Vec2 vocab tokens
-                                        │
-                      torchaudio.functional.forced_align  ──▶  phoneme boundaries
-                         (falls back to uniform segmentation if OOV / too short)
-                                        │
-                              OOV phonemes → _FLOOR penalty (0 %)
-                                        │
-                              Per-phoneme log-prob mean
-                                        │
-                              Normalises raw log-probs (−25…−3) → 0–100
-```
-
-### Combined Score
-
-```
-accuracy_score     = 0.55 × ipa_accuracy + 0.45 × gop_score
-completeness_score = accuracy-weighted ratio of correctly pronounced ref words
-                     (only words with IPA accuracy ≥ 60% count as "complete")
-fluency_score      = 0.4 × rate_score + 0.6 × pause_score
-                     (rate: deviation from 3.0 wps, pause: gaps >0.8s penalised)
-prosody_score      = 0.55 × intonation + 0.20 × speed + 0.25 × rhythm
-                     (intonation = 0.50×variance + 0.30×range + 0.20×contour)
-                     (speed: deviation from 3.0 wps, rhythm: nPVI)
-                     (monotone cap at 30)
-overall_score      = 0.4 × s0 + 0.2 × s1 + 0.2 × s2 + 0.2 × s3 (sorted low→high)
-```
-
-### Word-Level Error Types
-
-Each word in the evaluation receives an `error_type`:
-
-| Condition                                  | ErrorType          |
-| ------------------------------------------ | ------------------ |
-| Aligned (match/substitute), accuracy ≥ 60% | `None`             |
-| Aligned (match/substitute), accuracy < 60% | `Mispronunciation` |
-| Word in reference but not spoken (delete)  | `Omission`         |
-| Word spoken but not in reference (insert)  | `Insertion`        |
-| Long pause (>0.8s) detected before word    | `UnexpectedBreak`  |
-| Missing pause at punctuation (<0.15s)      | `MissingBreak`     |
-
-| Score Range | Level        | Feedback                       |
-| ----------- | ------------ | ------------------------------ |
-| 80–100      | 🟢 Excellent | Closely matches reference      |
-| 60–79       | 🔵 Good      | Minor improvements needed      |
-| 40–59       | 🟡 Fair      | Several sounds need practice   |
-| 0–39        | 🔴 Poor      | Significant improvement needed |
+The v1 formulas (accuracy, completeness, fluency, prosody, overall, error types) are in [scoring-v1.md](scoring-v1.md); the phoneme-native v2 scoring is in [scoring-v2.md](scoring-v2.md).
 
 ---
 
@@ -306,123 +235,10 @@ All audio is converted to **16 kHz mono float32** numpy arrays via librosa.
 
 ## 8. API Response Schema
 
-### POST /api/v1/evaluate — `PronunciationResponse`
-
-```json
-{
-  "reference_text": "hello world",
-  "transcribed_text": "hello world",
-  "results": {
-    "reference_ipa": "hɛloʊ wɝld",
-    "actual_ipa": "hɛloʊ wɝld",
-    "word_details": [
-      {
-        "word": "hello",
-        "expected_ipa": "hɛloʊ",
-        "actual_ipa": "hɛloʊ",
-        "phoneme_details": [
-          {
-            "expected_ipa": "h",
-            "actual_ipa": "h",
-            "is_correct_ipa": true,
-            "confidence_ipa": 1.0,
-            "gop_score": 88.2,
-            "gop_quality": "excellent"
-          },
-          {
-            "expected_ipa": "ɛ",
-            "actual_ipa": "ɛ",
-            "is_correct_ipa": true,
-            "confidence_ipa": 1.0,
-            "gop_score": 75.1,
-            "gop_quality": "good"
-          }
-        ],
-        "ipa_accuracy": 100.0,
-        "word_gop_score": 81.6,
-        "word_gop_quality": "excellent",
-        "error_type": "None"
-      }
-    ],
-    "overall_ipa_accuracy": 100.0,
-    "overall_gop_score": 82.5,
-    "overall_gop_quality": "excellent"
-  },
-  "accuracy_score": 90.4,
-  "completeness_score": 100.0,
-  "fluency_score": 95.0,
-  "prosody_score": 78.3,
-  "overall_score": 94.2,
-  "level": "excellent",
-  "feedback": "Excellent pronunciation! Your speech closely matches the reference. Score: 94.2/100."
-}
-```
-
-### GET /api/v1/text-analysis — `IPAConvertResponse`
-
-```json
-{
-  "text": "hello world",
-  "ipa": "hɛloʊ wɝld",
-  "words": [
-    { "word": "hello", "ipa": "hɛloʊ", "phonemes": ["h", "ɛ", "l", "oʊ"] },
-    { "word": "world", "ipa": "wɝld", "phonemes": ["w", "ɝ", "l", "d"] }
-  ]
-}
-```
-
-### POST /api/v1/transcribe — `TranscribeResponse`
-
-```json
-{
-  "transcription": "hello world",
-  "duration_sec": 2.35
-}
-```
-
-### GET /api/v1/model-info — `ModelInfoResponse`
-
-```json
-{
-  "app_name": "Pronunciation Validator",
-  "app_version": "1.0.0",
-  "asr_model": "facebook/wav2vec2-base-960h",
-  "device": "cpu",
-  "sample_rate": 16000,
-  "max_duration_sec": 30,
-  "max_upload_mb": 25,
-  "supported_formats": [
-    "audio/flac",
-    "audio/mp3",
-    "audio/mpeg",
-    "audio/ogg",
-    "audio/wav",
-    "audio/wave",
-    "audio/webm",
-    "audio/x-wav"
-  ]
-}
-```
-
-### GET /health — `HealthResponse`
-
-```json
-{
-  "status": "ok",
-  "version": "1.0.0",
-  "model_loaded": true
-}
-```
+Response schemas and examples for every endpoint, v1 and v2: [api.md](api.md).
 
 ---
 
 ## 9. Resource Benchmarks
 
-| Metric             | Value (wav2vec2-base-960h) |
-| ------------------ | -------------------------- |
-| Model size         | ~94 MB                     |
-| RAM usage          | ~813 MB                    |
-| Latency (3s audio) | ~0.25 s on CPU             |
-| Estimated cost     | ~$13/month (Railway Hobby) |
-
-For non-native speaker evaluation with higher accuracy, use `wav2vec2-large-960h-lv60-self` (~1.2 GB, ~7s latency, WER ~1.8%).
+Measured latency and memory for v1, v2 FP32 and v2 INT8: [evaluation.md](evaluation.md). Sizing and runtime rules: [deployment.md](deployment.md).

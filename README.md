@@ -1,761 +1,203 @@
+<div align="center">
+
 # 🗣️ Pronunciation Validation Service
 
-REST API service that evaluates English pronunciation quality by comparing audio recordings against reference text. Provides **IPA phoneme comparison**, **Goodness-of-Pronunciation (GOP) scoring**, **word-level error classification**, **fluency analysis**, **prosody & monotone detection**, and **Azure-compatible sub-scores** (accuracy, completeness, fluency, prosody).
+**Phoneme-level English pronunciation scoring over a simple REST API.**
+Upload a recording and the sentence the speaker should have said; get per-phone, per-word and overall scores with the heard phones and word timing.
+
+![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
+![ONNX Runtime](https://img.shields.io/badge/ONNX_Runtime-1.20-005CED?logo=onnx&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.5_(v1)-EE4C2C?logo=pytorch&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
+![API](https://img.shields.io/badge/API-v1_%7C_v2-informational)
+![License](https://img.shields.io/badge/license-Apache--2.0-blue)
+
+[Quick start](#-quick-start) · [API](#-api) · [How v2 works](#-how-v2-works) · [Results](#-results) · [Docs](#-documentation)
+
+</div>
+
+---
+
+## ✨ What it does
+
+Given `audio` + `reference_text`, the service returns:
+
+- **IPA comparison**: expected vs heard phone for every phoneme of every word
+- **Scores**: accuracy, completeness, fluency, prosody and an overall score (0-100) with a level and feedback text
+- **Word error types**: `None`, `Mispronunciation`, `Omission`, `Insertion`, `UnexpectedBreak`, `MissingBreak`
+- **Word timing** (v2): `start_ms` / `end_ms` for every word
+
+Two pipelines run side by side, with the same request and response shape:
+
+| | **v1** `/api/v1/evaluate` | **v2** `/api/v2/evaluate` |
+| --- | --- | --- |
+| Idea | Transcribe words with Wav2Vec2, compare text, hand-tuned formulas | Score each *expected phone* with a phone-level model; a learned scorer maps it to expert-style scores |
+| Phone model | Wav2Vec2 letters (A-Z) | HuBERT-base phone CTC (41 IPA phones), ONNX INT8 |
+| Scores | Formulas (55% IPA + 45% GOP, Azure-style overall) | Trained on speechocean762 expert scores |
+| Latency p50 (3.4 s clip, 4 vCPU) | 381 ms | **125 ms** |
+| Memory after load (each alone) | 796 MB | **430 MB** |
+| Phone-score correlation with experts (adults) | 0.03 | **0.63** |
+
+v1 is unchanged and stays available. See [docs/scoring-v2.md](docs/scoring-v2.md) for why v2 exists and [docs/api.md](docs/api.md#post-apiv2evaluate) for the differences in the response.
 
 ## 🏗️ Architecture
 
-```
-pronuncation-validate/
-├── app/
-│   ├── api/                        # API layer (FastAPI)
-│   │   ├── routes/
-│   │   │   ├── health.py           # GET /health — public, no auth
-│   │   │   ├── pronunciation.py    # POST /api/v1/evaluate — protected
-│   │   │   ├── ipa.py              # GET /api/v1/text-analysis — protected
-│   │   │   ├── transcribe.py       # POST /api/v1/transcribe — protected
-│   │   │   └── model_info.py       # GET /api/v1/model-info — public
-│   │   ├── dependencies.py         # DI: verify_api_key (one-time warning), get_pronunciation_svc
-│   │   └── middleware.py           # CORS (configurable via env), global exception handlers
-│   ├── core/                       # Configuration
-│   │   ├── config.py               # pydantic-settings (from .env via absolute path, CORS property)
-│   │   ├── concurrency.py          # asyncio.Semaphore — limits concurrent ML inference
-│   │   ├── constants.py            # Shared constants (MIME types, upload limits — single source of truth)
-│   │   └── logging.py              # Loguru setup
-│   ├── models/                     # Domain models
-│   │   └── schemas.py              # Pydantic v2 request/response schemas (ErrorType, WordResult, etc.)
-│   ├── services/                   # Business logic
-│   │   ├── asr_service.py          # Speech recognition (Wav2Vec2)
-│   │   ├── ipa_service.py          # IPA phoneme conversion (g2p_en, lru_cache per word)
-│   │   ├── gop_service.py          # GOP scoring (CTC log-probs, remainder-aware frames)
-│   │   ├── prosody_service.py      # Prosody analysis (pitch via librosa pyin, monotone detection)
-│   │   └── pronunciation_service.py # Orchestrator (DP alignment, error types, sub-scores)
-│   ├── utils/                      # Pure utility functions
-│   │   ├── audio.py                # Audio loading & processing (librosa)
-│   │   └── text.py                 # Text normalisation
-│   └── application.py              # FastAPI app factory + lifespan model preload
-├── tests/                          # pytest + pytest-asyncio (318 tests)
-│   ├── conftest.py                 # Shared fixtures (mock services, async client)
-│   ├── test_api.py                 # Integration tests for all API endpoints
-│   ├── test_audio_utils.py         # Audio loading, normalisation, duration validation
-│   ├── test_dependencies.py        # API key auth logic
-│   ├── test_gop_service.py         # GOP normalisation, quality levels, scoring
-│   ├── test_ipa_service.py         # ARPAbet→IPA mapping, word/text→IPA conversion
-│   ├── test_phoneme_mappings.py    # Cross-service phoneme mapping consistency (41 IPA)
-│   ├── test_pronunciation_service.py # Alignment, similarity, build IPA result, evaluate
-│   ├── test_prosody_service.py     # Prosody scoring, monotone detection, edge cases
-│   └── test_text_utils.py          # Text normalisation & tokenisation
-├── docs/                           # Project docs
-│   ├── workflow.md                 # Request flow & deployment diagrams
-│   └── structure.md                # Detailed directory documentation
-├── main.py                         # Entry point (reads PORT from Settings)
-├── Dockerfile                      # Production image — bakes model at build time
-├── railway.toml                    # Railway PaaS deployment config (health check on /health)
-├── requirements.txt
-├── debugs/                         # Diagnostic & benchmark scripts (not production)
-│   ├── benchmark.py                # Per-request resource benchmark (latency, RAM, CPU)
-│   ├── debug_gop_raw.py            # Raw GOP score analysis with Google TTS
-│   └── verify_scores.py            # Score verification after calibration changes
-├── .env.example
-└── .github/
-    └── copilot-instructions.md     # AI assistant coding conventions
+```mermaid
+flowchart LR
+    client["Client / product backend"] -->|"audio + reference_text<br/>X-API-Key"| mw
+    subgraph svc["FastAPI service (one process, one worker)"]
+        mw["Middleware<br/>CORS, rate limit, timeout"] --> val["Auth + upload validation"]
+        val --> sem["Inference semaphore<br/>queue, 503 when full"]
+        sem --> v1["v1 pipeline<br/>Wav2Vec2 ASR, g2p, GOP, pyin"]
+        sem --> v2["v2 pipeline<br/>ONNX phone CTC, GOP features, learned scorer"]
+    end
+    v1 --> w1[("Wav2Vec2 weights<br/>in the image")]
+    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>from a private HF repo at build time")]
 ```
 
-## 🔧 Tech Stack
+More diagrams (v1 vs v2, request sequence, startup): [docs/architecture.md](docs/architecture.md).
 
-| Component        | Technology                                                                   |
-| ---------------- | ---------------------------------------------------------------------------- |
-| Web Framework    | FastAPI 0.115+ / Uvicorn                                                     |
-| ASR Model        | [Wav2Vec2](https://huggingface.co/facebook/wav2vec2-base-960h) (HuggingFace) |
-| IPA Conversion   | g2p_en (grapheme-to-phoneme) + NLTK                                          |
-| GOP Scoring      | CTC log-posterior based                                                      |
-| Audio Processing | librosa, soundfile, ffmpeg                                                   |
-| Validation       | Pydantic v2                                                                  |
-| Config           | pydantic-settings (`.env` via absolute path)                                 |
-| Logging          | loguru                                                                       |
-| Auth             | API Key via `X-API-Key` header                                               |
-| Python           | 3.11 (Miniconda)                                                             |
+## 🔬 How v2 works
 
-### Supported ASR Models
+```mermaid
+flowchart LR
+    A["Audio"] --> B["Decode<br/>16 kHz mono"]
+    B --> C["ONNX HuBERT phone CTC<br/>~120 ms"]
+    T["Reference text"] --> P["g2p to expected phones"]
+    C --> D["CTC forced alignment<br/>per expected phone ~3 ms"]
+    P --> D
+    C --> H["Heard phones<br/>greedy decode"]
+    D --> F["GOP features<br/>LPP, LPR, duration"]
+    F --> S["Learned scorer<br/>phone MLP + ridge ~1 ms"]
+    H --> S
+    S --> R["Scores, heard phones,<br/>word timing"]
+```
 
-| Model                                    | Size    | Latency (3s audio, CPU) | WER   | Best for                     |
-| ---------------------------------------- | ------- | ----------------------- | ----- | ---------------------------- |
-| `facebook/wav2vec2-base-960h`            | ~94 MB  | ~0.25s                  | ~3.4% | Cost-efficient, general use  |
-| `facebook/wav2vec2-large-960h-lv60-self` | ~1.2 GB | ~7s                     | ~1.8% | Accented speech (RAM ≥ 4 GB) |
+1. A phone CTC model (fine-tuned on native LibriSpeech only) gives per-frame phone posteriors.
+2. The reference text becomes expected phones (g2p); numpy CTC forced alignment finds where each one should be.
+3. Per-phone goodness-of-pronunciation features (log posterior of the expected phone, how much better another phone fits, duration) and the greedy-decoded heard phones feed a small scorer trained on speechocean762.
+4. Silence and audio with no decodable speech return a zero-score response instead of a guess.
 
-Set via `ASR_MODEL_NAME` in `.env`.
+Timings are for a 3.4 s clip, INT8, 4 vCPU, on a dev box. Full description: [docs/scoring-v2.md](docs/scoring-v2.md).
 
-## 🚀 Quick Start
-
-### 1. Install dependencies
+## 🚀 Quick start
 
 ```bash
-conda create -n pronun python=3.11.7
-conda activate pronun
+python3.11 -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+cp .env.example .env                                       # set API_KEY (>= 32 chars) or DEBUG=true
+python main.py                                             # http://localhost:8000/docs
 ```
 
-### 2. Configure environment
+The v1 model downloads from Hugging Face on first start. **v2 needs three files** in `data/models/hubert-phone-ctc/` (`model.int8.onnx`, `vocab.json`, `scorer.json`); without them `/api/v2/evaluate` answers `503` and v1 is unaffected.
 
 ```bash
-cp .env.example .env
-# Edit .env — set API_KEY, model name, etc.
+# fetch the v2 files from the private repo (needs a Hugging Face read token)
+huggingface-cli login
+huggingface-cli download dris1153/pronunciation-v2 model.int8.onnx vocab.json scorer.json --local-dir data/models/hubert-phone-ctc
 ```
 
-### 3. Run the server
+Or build them yourself: [docs/training.md](docs/training.md).
 
 ```bash
-python main.py
-# or
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+curl -X POST http://localhost:8000/api/v2/evaluate \
+  -H "X-API-Key: $API_KEY" \
+  -F "audio=@recording.wav" -F "reference_text=hello world"
 ```
 
-### 4. Open API docs
-
-Visit [http://localhost:8000/docs](http://localhost:8000/docs) for the interactive Swagger UI.
-
-## 🔐 Authentication
-
-Protected endpoints require an `X-API-Key` header.
-
-| Behaviour          | Condition                                          |
-| ------------------ | -------------------------------------------------- |
-| Auth **disabled**  | `API_KEY` env var is empty (local dev convenience) |
-| `401 Unauthorized` | Header missing when `API_KEY` is set               |
-| `403 Forbidden`    | Header present but value doesn't match             |
-| ✅ Proceed         | Header matches `API_KEY`                           |
-
-> **Note:** When `API_KEY` is empty, a warning is logged **once at startup** (not per request) to remind you to set it before deploying.
-
-```bash
-# Generate a strong key
-python -c "import secrets; print(secrets.token_urlsafe(32))"
-```
-
-| Endpoint                    | Auth Required |
-| --------------------------- | ------------- |
-| `GET /health`               | ❌ No         |
-| `GET /docs`                 | ❌ No         |
-| `GET /api/v1/model-info`    | ❌ No         |
-| `POST /api/v1/evaluate`     | ✅ Yes        |
-| `POST /api/v2/evaluate`     | ✅ Yes        |
-| `GET /api/v1/text-analysis` | ✅ Yes        |
-| `POST /api/v1/transcribe`   | ✅ Yes        |
-
-## 🔌 Internal Microservice Mode
-
-When this service is called from another backend (e.g., your Product BE) instead of directly by end-users, per-IP rate limiting causes **all your end-users to share one quota** — 1000 users → 1 source IP → 429 storms.
-
-Enable per-end-user rate limiting:
-
-### 1. Configure this service
-
-```bash
-# .env
-SERVICE_API_KEY=<strong-random-key>          # generate per snippet below
-TRUSTED_PROXY_CIDRS_STR=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
-```
-
-```bash
-# Generate strong service key
-python -c "import secrets; print(secrets.token_urlsafe(48))"
-```
-
-### 2. Send three headers from your backend
-
-```http
-X-API-Key:       <PRONUNCIATION_API_KEY>
-X-Service-Auth:  <SERVICE_API_KEY>
-X-End-User-Id:   <user-uuid OR anon-<session-id>>
-```
-
-### 3. Handle 503 with retry-backoff
-
-When the inference queue is full, this service returns `503 Retry-After: 30`. Your backend should retry with exponential backoff (1s, 2s, 4s, max 3 attempts).
-
-### Decision table — how the rate-limit key is derived
-
-| Direct TCP peer    | Service auth match | Valid `X-End-User-Id` | Resulting key  |
-| ------------------ | ------------------ | --------------------- | -------------- |
-| Untrusted CIDR     | (any)              | (any)                 | `ip:<peer>`    |
-| Trusted CIDR       | No                 | (any)                 | `ip:<peer>`    |
-| Trusted CIDR       | Yes                | No                    | `ip:<peer>`    |
-| Trusted CIDR       | Yes                | Yes                   | `user:<id>` ✓  |
-
-> **Spoof-safe by design** — trust gate uses the **direct TCP peer**, not the XFF-resolved address, so an attacker cannot forge `X-Forwarded-For: 172.17.0.5` to bypass the check.
-
-> **Backward compatible** — leave `SERVICE_API_KEY` empty and the service rate-limits per-IP exactly as before.
-
-See [docs/internal-integration.md](docs/internal-integration.md) for TypeScript / Python wrapper examples and full operational guidance.
-
-## 📡API Endpoints
-
-### `GET /health`
-
-Health check — returns service status and model load state. **No authentication required.**
-
-### `POST /api/v1/evaluate`
-
-Evaluate pronunciation quality. **Requires `X-API-Key` header.**
-
-**Request** (multipart/form-data):
-
-| Field            | Type   | Description                            |
-| ---------------- | ------ | -------------------------------------- |
-| `audio`          | File   | Audio file (wav, mp3, ogg, flac, webm) |
-| `reference_text` | string | Text the speaker should have said      |
-
-> **Upload limit:** Maximum audio file size is **25 MB**. Larger files return HTTP 400.
-
-**Response** (JSON):
-
-```json
+```jsonc
 {
   "reference_text": "hello world",
-  "transcribed_text": "hallo world",
+  "transcribed_text": "jɛloʊ wɝd",            // v2: the heard IPA string
   "results": {
-    "reference_ipa": "həloʊ wɝld",
-    "actual_ipa": "hɔloʊ wɝld",
-    "word_details": [
-      {
-        "word": "hello",
-        "expected_ipa": "həloʊ",
-        "actual_ipa": "hɔloʊ",
-        "phoneme_details": [
-          {
-            "expected_ipa": "h",
-            "actual_ipa": "h",
-            "is_correct_ipa": true,
-            "confidence_ipa": 1,
-            "gop_score": 59.34,
-            "gop_quality": "fair"
-          },
-          {
-            "expected_ipa": "ə",
-            "actual_ipa": "ɔ",
-            "is_correct_ipa": false,
-            "confidence_ipa": 0,
-            "gop_score": 68.51,
-            "gop_quality": "good"
-          },
-          {
-            "expected_ipa": "l",
-            "actual_ipa": "l",
-            "is_correct_ipa": true,
-            "confidence_ipa": 1,
-            "gop_score": 71.96,
-            "gop_quality": "good"
-          },
-          {
-            "expected_ipa": "oʊ",
-            "actual_ipa": "oʊ",
-            "is_correct_ipa": true,
-            "confidence_ipa": 1,
-            "gop_score": 62.88,
-            "gop_quality": "good"
-          }
-        ],
-        "ipa_accuracy": 75,
-        "word_gop_score": 65.67,
-        "word_gop_quality": "good",
-        "error_type": "Mispronunciation"
-      },
-      {
-        "word": "world",
-        "expected_ipa": "wɝld",
-        "actual_ipa": "wɝld",
-        "phoneme_details": [
-          {
-            "expected_ipa": "w",
-            "actual_ipa": "w",
-            "is_correct_ipa": true,
-            "confidence_ipa": 1,
-            "gop_score": 63.93,
-            "gop_quality": "good"
-          },
-          {
-            "expected_ipa": "ɝ",
-            "actual_ipa": "ɝ",
-            "is_correct_ipa": true,
-            "confidence_ipa": 1,
-            "gop_score": 73.6,
-            "gop_quality": "good"
-          },
-          {
-            "expected_ipa": "l",
-            "actual_ipa": "l",
-            "is_correct_ipa": true,
-            "confidence_ipa": 1,
-            "gop_score": 50.55,
-            "gop_quality": "fair"
-          },
-          {
-            "expected_ipa": "d",
-            "actual_ipa": "d",
-            "is_correct_ipa": true,
-            "confidence_ipa": 1,
-            "gop_score": 43.71,
-            "gop_quality": "fair"
-          }
-        ],
-        "ipa_accuracy": 100,
-        "word_gop_score": 57.95,
-        "word_gop_quality": "fair",
-        "error_type": "None"
-      }
-    ],
-    "overall_ipa_accuracy": 87.5,
-    "overall_gop_score": 61.81,
-    "overall_gop_quality": "good"
+    "word_details": [{
+      "word": "hello", "expected_ipa": "həloʊ", "actual_ipa": "jɛloʊ",
+      "start_ms": 160, "end_ms": 440, "error_type": "Mispronunciation",
+      "phoneme_details": [{ "expected_ipa": "h", "actual_ipa": "j", "is_correct_ipa": false, "gop_score": 67.56 }]
+    }]
   },
-  "accuracy_score": 75.94,
-  "completeness_score": 100.0,
-  "fluency_score": 92.5,
-  "prosody_score": 78.3,
-  "overall_score": 87.48,
-  "level": "excellent",
-  "feedback": "Excellent pronunciation! Your speech closely matches the reference. Score: 87.5/100."
+  "accuracy_score": 57.26, "fluency_score": 74.69, "prosody_score": 68.98, "overall_score": 55.8, "level": "fair"
 }
 ```
 
-### `POST /api/v2/evaluate`
+(abridged; real output for a synthetic "yellow word" clip, full example in [docs/api.md](docs/api.md))
 
-Same request and response shape as `/api/v1/evaluate`, scored by a phoneme-level model (HuBERT-base phone CTC, ONNX INT8) and a learned scorer instead of word ASR + hand-tuned formulas. v1 is unchanged.
+### Docker
 
-Differences from v1:
+```bash
+docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 --secret id=hf_token,env=HF_TOKEN -t pronunciation-validator .
+docker run -p 8000:8000 -e API_KEY=<32+ char key> -e DEBUG=false pronunciation-validator
+```
 
-| Field | v2 behaviour |
+Railway, Coolify/nixpacks, sizing and the model-publishing flow: [docs/deployment.md](docs/deployment.md).
+
+## 📡 API
+
+| Endpoint | Auth | Purpose |
+| --- | --- | --- |
+| `POST /api/v2/evaluate` | 🔒 | Pronunciation score, phoneme-native pipeline, with word timing |
+| `POST /api/v1/evaluate` | 🔒 | Pronunciation score, original Wav2Vec2 pipeline |
+| `GET /api/v1/text-analysis` | 🔒 | Text to IPA with per-word phonemes |
+| `POST /api/v1/transcribe` | 🔒 | Audio to text, no scoring |
+| `GET /api/v1/model-info` | - | Service metadata and limits |
+| `GET /health` | - | Liveness |
+
+🔒 = `X-API-Key` header. Limits: 10 MB upload, 30 s audio, wav / mp3 / ogg / flac / webm. Interactive docs at `/docs`. Calling from a backend with per-user rate limits: [docs/internal-integration.md](docs/internal-integration.md). Reference: [docs/api.md](docs/api.md).
+
+## 📊 Results
+
+speechocean762 test split (2500 utterances, Mandarin-L1 learners), Pearson correlation with expert scores, adults (18+):
+
+| | v1 | **v2** |
+| --- | --- | --- |
+| Utterance total | 0.62 | **0.85** |
+| Utterance fluency | 0.63 | **0.88** |
+| Utterance prosodic | 0.11 | **0.85** |
+| Word accuracy | 0.02 | **0.64** |
+| Phone accuracy | 0.03 | **0.63** |
+| Mispronunciation detection F1 | 0.27 | **0.54** |
+
+Phone model: 1.86% phone error rate on LibriSpeech test-clean. INT8 changes every metric by 0.004 or less.
+
+> ⚠️ **Honest limits.** All evaluation speakers are Mandarin-L1; **Vietnamese-L1 accuracy has not been measured** and no open Vietnamese-L1 dataset with pronunciation scores was found ([data plan](docs/evaluation.md#data-plan-for-vietnamese-learners)). The score curve was tuned on five synthetic clips. Speed numbers come from a dev box; re-run `debugs/benchmark.py` on your host. Details: [docs/evaluation.md](docs/evaluation.md).
+
+## 🧰 Tech stack
+
+| Component | Technology |
 | --- | --- |
-| `results.word_details[].start_ms` / `end_ms` | **New.** Word position in the audio (ms). |
-| `transcribed_text` | The heard **IPA string**, not words (there is no word ASR). |
-| `phoneme_details[].is_correct_ipa` | Learned flag (phone score < 1.48/2), not `actual_ipa == expected_ipa`. `actual_ipa` is only the heard phone. On speechocean762 test, 18% of phones are heard differently yet accepted (accent-neutral variants such as ɪ/i, ʌ/ɑ); 0.3% are heard correctly yet flagged. Use `is_correct_ipa` for "needs practice", `actual_ipa` for "what it sounded like". |
-| `overall_score`, `accuracy_score`, `fluency_score`, `prosody_score` | Learned predictions mapped onto a stricter curve (`100·(s/10)^1.4`), the same for all four. `completeness_score` is the share of non-deleted phones. |
-| `error_type` | `Omission` (all phones deleted), `Mispronunciation` (word score < 60), then `UnexpectedBreak` / `MissingBreak` as in v1. `Insertion` is never set on words (same as v1). |
+| Web | FastAPI, Uvicorn, Pydantic v2, slowapi |
+| v2 phone model | HuBERT-base fine-tuned for phone CTC, ONNX Runtime (INT8), numpy alignment and scorer (no PyTorch) |
+| v1 | Wav2Vec2-base-960h (PyTorch, CPU), librosa pyin prosody |
+| Text to phones | g2p_en + NLTK, 41-symbol IPA inventory |
+| Training | PyTorch + Transformers on a GPU, offline only (`training/`) |
+| Ops | Docker, Railway / Coolify, loguru, Hugging Face Hub for model artifacts |
 
-Needs `model.int8.onnx`, `vocab.json`, `scorer.json` in `PHONE_MODEL_DIR` (`PHONE_MODEL_INT8=false` uses `model.onnx`). Without them the endpoint returns **503** and v1 keeps working.
-Docker build: `docker build --build-arg V2_MODEL_REPO=<org>/<repo> --secret id=hf_token,env=HF_TOKEN .` (private Hugging Face repo; publish with `scripts/upload_v2_model.py`). Training/export: [training/README.md](training/README.md).
-
-### `GET /api/v1/text-analysis`
-
-Analyse English text and convert to IPA with per-word phoneme breakdown. **Requires `X-API-Key` header.**
-
-**Query Parameters:**
-
-| Param  | Type   | Description                           |
-| ------ | ------ | ------------------------------------- |
-| `text` | string | English text to analyse (1–500 chars) |
-
-**Response** (JSON):
-
-```json
-{
-  "text": "hello world",
-  "ipa": "hɛloʊ wɝld",
-  "words": [
-    {
-      "word": "hello",
-      "ipa": "hɛloʊ",
-      "phonemes": ["h", "ɛ", "l", "oʊ"]
-    },
-    {
-      "word": "world",
-      "ipa": "wɝld",
-      "phonemes": ["w", "ɝ", "l", "d"]
-    }
-  ]
-}
-```
-
-### `POST /api/v1/transcribe`
-
-Upload audio and get plain-text transcription (no scoring). **Requires `X-API-Key` header.**
-
-**Request** (multipart/form-data):
-
-| Field   | Type | Description                            |
-| ------- | ---- | -------------------------------------- |
-| `audio` | File | Audio file (wav, mp3, ogg, flac, webm) |
-
-> **Upload limit:** Maximum audio file size is **25 MB**. Larger files return HTTP 400.
-
-**Response** (JSON):
-
-```json
-{
-  "transcription": "hello world",
-  "duration_sec": 2.35
-}
-```
-
-### `GET /api/v1/model-info`
-
-Return service metadata and capabilities. **No authentication required.**
-
-**Response** (JSON):
-
-```json
-{
-  "app_name": "Pronunciation Validator",
-  "app_version": "1.0.0",
-  "asr_model": "facebook/wav2vec2-base-960h",
-  "device": "cpu",
-  "sample_rate": 16000,
-  "max_duration_sec": 30,
-  "max_upload_mb": 25,
-  "supported_formats": [
-    "audio/flac",
-    "audio/mp3",
-    "audio/mpeg",
-    "audio/ogg",
-    "audio/wav",
-    "audio/wave",
-    "audio/webm",
-    "audio/x-wav"
-  ]
-}
-```
-
-## ⚙️ How It Works
-
-### Pipeline Overview
+## 📁 Project layout
 
 ```
-Audio bytes → ASR (Wav2Vec2) → Transcription → IPA comparison + GOP scoring → Unified response
+app/            FastAPI app: api/ (routes, auth, upload), core/ (config), models/ (schemas),
+                services/ (v1 pipeline, shared alignment + scoring rules, v2/ phone pipeline), utils/
+training/       Offline training and ONNX export of the v2 models (own CUDA venv)
+scripts/        speechocean762 evaluation harness, sanity set, Hugging Face upload
+debugs/         Latency / memory benchmark (v1 and v2)
+tests/          pytest suite (~460 tests) + synthetic sanity recordings
+docs/           Documentation
 ```
 
-1. **Audio Processing** — Load and resample audio to 16 kHz mono float32 (librosa)
-2. **ASR Transcription** — Wav2Vec2 transcribes what was actually said
-3. **IPA Conversion** — Both reference and transcription → IPA phonemes (g2p_en + ARPAbet→IPA mapping)
-4. **IPA Comparison** — Separate DP alignment for words (`_align_words`) and phonemes (`_align_phonemes`) with ε-tolerance back-trace
-5. **GOP Scoring** — CTC log-posteriors with remainder-aware frame distribution (no dropped tail frames)
-6. **Prosody Analysis** — Pitch extraction via librosa pyin, pitch variance/range/contour scoring, monotone detection
-7. **Error Classification** — Each word receives an `ErrorType`: `None`, `Mispronunciation`, `Omission`, `Insertion`, `UnexpectedBreak`, or `MissingBreak`
-8. **Sub-scores** — `accuracy_score` = 55% IPA + 45% GOP; `completeness_score` = accuracy-weighted ratio of correctly pronounced reference words; `fluency_score` = speech rate + pause analysis; `prosody_score` = intonation + speed + rhythm
-9. **Combined Score** — Azure-style weighted formula: sort 4 sub-scores low→high, `0.4 × s0 + 0.2 × s1 + 0.2 × s2 + 0.2 × s3`
-
-### Scoring Formula
-
-#### Accuracy Score (sub-score)
-
-Combines phoneme-level IPA comparison and GOP scoring:
-
-```math
-AccuracyScore = IPA_{accuracy} \times 0.55 + GOP_{score} \times 0.45
-```
-
-#### Completeness Score (sub-score)
-
-Measures how many reference words were **correctly** pronounced by the speaker:
-
-```math
-CompletenessScore = \frac{CorrectlyPronouncedWords}{ReferenceWords} \times 100
-```
-
-A word is "correctly pronounced" if:
-
-1. The alignment operation is `match` or `substitute` (word was attempted), **and**
-2. The word-level IPA accuracy ≥ 60% (`_MISPRONUNCIATION_THRESHOLD`)
-
-Omitted (`delete`) words and mispronounced words (accuracy < 60%) are not counted. Extra spoken words (`insert`) do not affect completeness.
-
-#### Fluency Score (sub-score)
-
-Measures speech fluidity using word-level CTC frame timing from GOP forced alignment:
-
-```math
-FluencyScore = 0.4 \times RateScore + 0.6 \times PauseScore
-```
-
-**Speech rate** — deviation from the ideal rate (~3.0 words/sec). Rates within a ±0.5 wps tolerance band receive full marks; deviations beyond that are penalised at 20 points per wps.
-
-**Pause penalty** — long gaps (>0.8s) between consecutive words reduce fluency, modelling hesitations and unexpected breaks. Each excess second of pause costs 15 points.
-
-Azure defines fluency as "how closely the speech matches a native speaker's use of silent breaks between words" — pause patterns are the primary signal (60%), speech rate is a secondary proxy (40%).
-
-#### Prosody Score (sub-score)
-
-Evaluates pitch variation, speech rate, and rhythm naturalness. The prosody score has three components:
-
-```math
-ProsodyScore = 0.55 \times IntonationScore + 0.20 \times SpeedScore + 0.25 \times RhythmScore
-```
-
-**Intonation score (55%)** — combines three pitch metrics:
-
-```math
-IntonationScore = 0.50 \times VarianceScore + 0.30 \times RangeScore + 0.20 \times ContourScore
-```
-
-- _Variance score_ — pitch coefficient of variation (CV = std/mean). CV ≤ `monotone_threshold` (0.08) = score 0; CV ≥ `cv_upper` (0.25) = score 100. Linear interpolation between.
-- _Range score_ — pitch range in semitones. 0 st = score 0; ≥ 15 st = score 100. Linear interpolation.
-- _Contour score_ — direction change ratio in pitch contour. Target ratio 0.45 gets full marks; deviations penalised linearly.
-
-**Speed score (20%)** — words-per-second deviation from ideal 3.0 wps (±0.5 tolerance). Each 1 wps beyond tolerance → −30 points.
-
-**Rhythm score (25%)** — normalised Pairwise Variability Index (nPVI). Measures stress-timing naturalness; native English nPVI ~50–70, syllable-timed ~30–40. Scored linearly: nPVI ≤30 → 0, nPVI ≥70 → 100.
-
-**Monotone detection** — when pitch CV < threshold (0.08), `is_monotone = True` and prosody score is capped at 30.
-
-**Voiced ratio guard** — if less than 10% of frames are voiced, returns score 0 (insufficient voiced signal).
-
-**Default behaviour** — when word durations are unavailable (no CTC timing), speed and rhythm default to 50 (neutral).
-
-#### Overall Combined Score
-
-Sub-scores are sorted low→high and combined using the Azure PronScore formula:
-
-```math
-CombinedScore = 0.4 \times S_0 + 0.2 \times S_1 + 0.2 \times S_2 + 0.2 \times S_3
-```
-
-The lowest sub-score gets the most weight (40%), heavily penalising the weakest dimension.
-
-#### Word-Level Error Classification
-
-Each word in the result receives an `error_type` based on alignment and accuracy:
-
-| Condition                                       | ErrorType          |
-| ----------------------------------------------- | ------------------ |
-| Word aligned (match/substitute), accuracy ≥ 60% | `None`             |
-| Word aligned (match/substitute), accuracy < 60% | `Mispronunciation` |
-| Word in reference but not spoken                | `Omission`         |
-| Word spoken but not in reference                | `Insertion`        |
-| Long pause (>0.8s) detected before word         | `UnexpectedBreak`  |
-| Missing pause at punctuation boundary (<0.15s)  | `MissingBreak`     |
-
-Threshold: `60.0` (aligned with Azure Speech SDK).
-
-#### IPA Accuracy (weight: 55%)
-
-Reference and transcribed text are compared at **two levels** using Levenshtein-based sequence alignment (dynamic programming with `float64` precision and ε = 10⁻⁶ back-trace tolerance):
-
-**Level 1 — Word alignment (`_align_words`):**
-
-Reference and transcribed word lists are aligned using plain Levenshtein DP (no phonetic similarity costs — word equality is binary). Produces match / substitute / insert / delete operations. Extra words spoken by the user (insertions) are penalised in the overall score.
-
-**Level 2 — Phoneme alignment (`_align_phonemes`, per word pair):**
-
-For each aligned word pair, reference and actual phoneme sequences are aligned using the same DP algorithm. The edit distance uses **phonetic similarity** — substituting a phoneme with one from the same phonetic group (e.g. `ɛ` ↔ `æ`, both front vowels) costs less than replacing with a phoneme from a different group.
-
-```
-Reference IPA:   [h, ɛ, l, oʊ]
-Actual IPA:      [h, ɛ, ə, l, oʊ]
-Alignment:
-  h  = h    ✓  match
-  ɛ  = ɛ    ✓  match
-  -  ← ə    ✗  insert (extra phoneme in actual)
-  l  = l    ✓  match
-  oʊ = oʊ   ✓  match
-→ 4/4 correct ref phonemes = 100% (insertion penalised in overall score)
-```
-
-**Phoneme confidence scoring:**
-
-| Alignment result                        | Confidence |
-| --------------------------------------- | ---------- |
-| Exact match                             | `1.0`      |
-| Substitution (same phonetic group)      | `0.3`      |
-| Substitution (different phonetic group) | `0.0`      |
-| Deletion (missing in actual)            | `0.0`      |
-| Insertion (extra in actual)             | `0.0`      |
-
-**Per-word accuracy:**
-
-```math
-WordAccuracy = \frac{CorrectPhonemes}{RefPhonemesInWord} \times 100
-```
-
-**Overall IPA accuracy (with insertion penalty):**
-
-```math
-OverallIPA = \frac{\sum CorrectPhonemes}{\sum RefPhonemes + \sum InsertedPhonemes} \times 100
-```
-
-> Extra words spoken add their phoneme count to the denominator, reducing the overall accuracy.
-
-#### GOP Score (weight: 45%)
-
-GOP (Goodness of Pronunciation) uses CTC log-posteriors from Wav2Vec2:
-
-**Step 1 — CTC log-posteriors:**
-
-Audio → Wav2Vec2 → output logits → `log_softmax` → matrix `(T, V)` where T = frames, V = vocab size
-
-**Step 2 — Remainder-aware frame segmentation:**
-
-Divide T frames across N phonemes. Each phoneme gets a base allocation, with remainder frames distributed to the **last** phonemes:
-
-```math
-base = \lfloor T / N \rfloor,\quad remainder = T \bmod N
-```
-
-Phonemes at positions `[N - remainder, N)` get `base + 1` frames; earlier phonemes get `base` frames. This ensures **all T frames are used** — no tail frames are dropped.
-
-**Step 3 — Raw GOP per phoneme:**
-
-For each phoneme `p`, map to Wav2Vec2 vocab token via `_IPA_TO_WAV2VEC`, then compute mean log-probability over its assigned frames `[start, end)`:
-
-```math
-GOP_{raw}(p) = \frac{1}{d} \sum_{t=start}^{end-1} \log P(p \mid o_t)
-```
-
-where `d = end - start` is the number of frames assigned to phoneme `p`.
-
-> If phoneme is not in vocab → fallback: use max log-prob across entire vocab for those frames.
-
-**Step 4 — Normalise to [0, 100]:**
-
-Empirically calibrated: CTC log-probs for correctly pronounced phonemes typically range from −25 (very poor) to −3 (excellent). Even "perfect" TTS audio rarely produces raw scores above −3 because CTC softmax always distributes probability mass across the full vocabulary.
-
-```math
-GOP_{norm} = \frac{\text{clamp}(GOP_{raw},\ -25,\ -3) - (-25)}{22} \times 100
-```
-
-Clamped to `[0, 100]`.
-
-**Step 5 — Aggregate:**
-
-- **Per-word GOP** = mean of phoneme GOP scores in that word
-- **Overall GOP** = mean of all phoneme GOP scores
-
-> Word boundaries use index-based tracking (not string equality), so duplicate words like "the cat and the dog" are handled correctly.
-
-#### Combined Score
-
-```math
-AccuracyScore = IPA_{accuracy} \times 0.55 + GOP_{score} \times 0.45
-```
-
-```math
-CompletenessScore = \frac{CorrectlyPronouncedWords}{ReferenceWords} \times 100
-```
-
-```math
-FluencyScore = 0.4 \times RateScore + 0.6 \times PauseScore
-```
-
-```math
-ProsodyScore = 0.55 \times IntonationScore + 0.20 \times SpeedScore + 0.25 \times RhythmScore
-```
-
-```math
-OverallScore = 0.4 \times S_0 + 0.2 \times S_1 + 0.2 \times S_2 + 0.2 \times S_3 \quad (S_0 \leq S_1 \leq S_2 \leq S_3)
-```
-
-#### Quality Levels
-
-| Score Range  | Level        | Feedback                             |
-| ------------ | ------------ | ------------------------------------ |
-| **80 – 100** | 🟢 Excellent | Speech closely matches the reference |
-| **60 – 79**  | 🔵 Good      | Minor improvements could be made     |
-| **40 – 59**  | 🟡 Fair      | Several sounds need practice         |
-| **0 – 39**   | 🔴 Poor      | Significant improvement needed       |
-
-### Scoring Example
-
-```
-Reference:     "the cat and the dog"
-Transcription: "the cat an the dock"
-
-Word alignment (DP):
-  the  = the   ✓ match     → ErrorType: None
-  cat  = cat   ✓ match     → ErrorType: None
-  and  ≈ an    ~ substitute → ErrorType: depends on accuracy
-  the  = the   ✓ match     → ErrorType: None
-  dog  ≈ dock  ~ substitute → ErrorType: depends on accuracy
-
-Phoneme alignment for "and" → "an":
-  Reference: [æ, n, d]    Actual: [æ, n]
-  æ = æ  ✓ match     confidence=1.0
-  n = n  ✓ match     confidence=1.0
-  d → ∅  ✗ delete    confidence=0.0
-  → Word accuracy = 2/3 × 100 = 66.7%  → ErrorType: None (≥60%)
-
-Phoneme alignment for "dog" → "dock":
-  Reference: [d, ɑ, ɡ]    Actual: [d, ɑ, k]
-  d = d  ✓ match     confidence=1.0
-  ɑ = ɑ  ✓ match     confidence=1.0
-  ɡ ≈ k  ✗ substitute (same group: voiced/voiceless plosive) confidence=0.3
-  → Word accuracy = 2/3 × 100 = 66.7%  → ErrorType: None (≥60%)
-
-Overall IPA = (3+3+2+3+2) / (3+3+3+3+3) = 13/15 × 100 = 86.7%
-
-GOP Scoring: (per-phoneme CTC log-prob scores, normalised 0-100)
-  → Overall GOP = 72.5 (example)
-
-Sub-scores:
-  Accuracy    = 86.7 × 0.55 + 72.5 × 0.45 = 47.7 + 32.6 = 80.3
-  Completeness = 5/5 × 100 = 100.0  (all reference words attempted)
-  Fluency      = 95.0  (normal speech rate, no long pauses)
-  Prosody      = 78.0  (good pitch variation, not monotone)
-
-Overall = sorted([80.3, 100.0, 95.0, 78.0]) = [78.0, 80.3, 95.0, 100.0]
-        = 0.4 × 78.0 + 0.2 × 80.3 + 0.2 × 95.0 + 0.2 × 100.0
-        = 31.2 + 16.06 + 19.0 + 20.0 = 86.3
-Level = EXCELLENT ✔
-```
-
-## 📋 Example cURL
-
-```bash
-# Evaluate pronunciation (requires API key)
-curl -X POST http://localhost:8000/api/v1/evaluate \
-  -H "X-API-Key: your-secret-api-key-here" \
-  -F "audio=@recording.wav" \
-  -F "reference_text=hello world"
-
-# Text analysis — IPA conversion (requires API key)
-curl "http://localhost:8000/api/v1/text-analysis?text=hello+world" \
-  -H "X-API-Key: your-secret-api-key-here"
-
-# Transcribe audio only (requires API key)
-curl -X POST http://localhost:8000/api/v1/transcribe \
-  -H "X-API-Key: your-secret-api-key-here" \
-  -F "audio=@recording.wav"
-
-# Model info (public — no API key)
-curl http://localhost:8000/api/v1/model-info
-
-# Health check (public — no API key)
-curl http://localhost:8000/health
-```
-
-## 🐳 Docker
-
-### Standalone
-
-```bash
-docker build -t pronunciation-validator .
-docker run -p 8000:8000 -e API_KEY=your-key pronunciation-validator
-```
-
-Model is **baked into the image** at build time via Dockerfile `RUN` step. PyTorch is installed as **CPU-only** (`torch+cpu` from the PyTorch CPU index) to keep the image lean.
-
-### Railway Deployment
-
-The project includes `railway.toml` for [Railway](https://railway.app) deployment:
-
-- **Dockerfile builder** — model is baked into the image at build time (no persistent volumes)
-- **Health check** — `GET /health` with 120s timeout configured in `railway.toml`
-- **PORT** is injected by Railway at runtime → read by pydantic-settings natively
-- **Build-arg override** — `docker build --build-arg ASR_MODEL_NAME=... .` works correctly (`ENV` set before `RUN`)
-- Set `API_KEY`, `ASR_MODEL_NAME`, etc. in Railway Dashboard
-- `CMD ["python", "main.py"]` — no shell expansion needed
-
-## ⚙️ Environment Variables
-
-| Variable                    | Default                       | Description                                    |
-| --------------------------- | ----------------------------- | ---------------------------------------------- |
-| `PORT`                      | `8000`                        | Server port (Railway overrides at runtime)     |
-| `ASR_MODEL_NAME`            | `facebook/wav2vec2-base-960h` | HuggingFace model ID                           |
-| `ASR_MODEL_CACHE_DIR`       | `./model_cache`               | Model cache directory                          |
-| `DEVICE`                    | `cpu`                         | `cpu` or `cuda`                                |
-| `API_KEY`                   | _(empty)_                     | Set to enable API key auth                     |
-| `CORS_ORIGINS_STR`          | `*`                           | Comma-separated allowed origins (or `*`)       |
-| `AUDIO_SAMPLE_RATE`         | `16000`                       | Audio sample rate (Hz)                         |
-| `AUDIO_MAX_DURATION_SEC`    | `30`                          | Max audio duration                             |
-| `MAX_CONCURRENT_INFERENCES` | `0` (auto)                    | Inference slots; torch threads = cores ÷ slots. 4 vCPU → set `2`; 2 vCPU → auto |
-| `DEBUG`                     | `false`                       | Enable uvicorn reload                          |
-| `LOG_LEVEL`                 | `INFO`                        | Logging level                                  |
+## 📚 Documentation
+
+| | |
+| --- | --- |
+| [API reference](docs/api.md) | Endpoints, auth, errors, examples |
+| [Architecture](docs/architecture.md) | Diagrams and code layout |
+| [Scoring v2](docs/scoring-v2.md) · [v1](docs/scoring-v1.md) | How scores are produced |
+| [Evaluation](docs/evaluation.md) | Quality, latency, memory, tests, data plan |
+| [Training](docs/training.md) | Train, export and publish the v2 models |
+| [Configuration](docs/configuration.md) · [Deployment](docs/deployment.md) | Environment variables, Docker, Railway, Coolify |
+| [Internal integration](docs/internal-integration.md) | Backend-to-service usage, moving a client to v2 |
+
+Index of all pages: [docs/README.md](docs/README.md). There is also a bilingual single-page version in [`index.html`](index.html).
 
 ## 🧪 Testing
 
@@ -763,49 +205,14 @@ The project includes `railway.toml` for [Railway](https://railway.app) deploymen
 pytest tests/ -v
 ```
 
-**318 tests** across 10 test files, covering all layers:
+Tests that need the real v2 model files skip themselves when the files are absent. Two v1 sanity cases (`poor_001`, `poor_002`) are known failures (v1 scores those clips just above their band); v2 passes both.
 
-| Test File                       | Coverage                                                                                                         |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `test_api.py`                   | Integration tests for all 5 API endpoints                                                                        |
-| `test_audio_utils.py`           | Audio loading, normalisation, duration validation, silence detection                                             |
-| `test_dependencies.py`          | API key authentication logic                                                                                     |
-| `test_gop_service.py`           | GOP normalisation, quality levels, scoring                                                                       |
-| `test_ipa_service.py`           | ARPAbet→IPA mapping, word/text→IPA conversion                                                                    |
-| `test_phoneme_mappings.py`      | Cross-service phoneme mapping consistency (41 IPA symbols synced across 3 services)                              |
-| `test_pronunciation_service.py` | Alignment, similarity, IPA result, error types, completeness, fluency, break detection, prosody, full evaluation |
-| `test_prosody_service.py`       | Prosody scoring, monotone detection, contour/variance/range scoring, edge cases                                  |
-| `test_text_utils.py`            | Text normalisation & tokenisation                                                                                |
-| `conftest.py`                   | Shared fixtures (mock services, async client)                                                                    |
+## 🤝 Contributing
 
-Async tests use `pytest-asyncio` with `asyncio_mode = "auto"`.
+Keep files under about 200 lines, follow the existing structure (`docs/structure.md`), and run the tests before pushing. Changes to scoring need a before/after run of the speechocean762 harness ([docs/evaluation.md](docs/evaluation.md)).
 
-## 📏 Evaluation
+## 📄 License and credits
 
-**Latency per stage** — every `/evaluate` logs one `evaluate_timing` record (`stage_ms`: decode, asr, ipa, gop, prosody, total). Offline benchmark on the real pipeline:
+Licensed under the [Apache License 2.0](LICENSE). Copyright 2026 dris1153. Redistributions must keep the [NOTICE](NOTICE) file.
 
-```bash
-python debugs/benchmark.py --cpus 2                       # mimic a 2-vCPU VPS
-python debugs/benchmark.py --cpus 4 --concurrency 2       # 2 inference slots under load
-```
-
-**Correlation with human raters** — [speechocean762](https://www.openslr.org/101/) (CC BY 4.0, Zhang et al., Interspeech 2021). Extract to `data/speechocean762/`, then:
-
-```bash
-python scripts/speechocean762_eval.py --out data/so762-test.jsonl --report reports/so762-test.json
-```
-
-Reports Pearson correlation of utterance / word / phone scores vs expert scores and phone-level mispronunciation precision/recall/F1 (all speakers + adults only). Runs in-process (no HTTP, no rate limit) and resumes from the JSONL.
-
-## 📊 Resource Benchmarks
-
-| Metric                      | wav2vec2-base-960h | wav2vec2-large |
-| --------------------------- | ------------------ | -------------- |
-| Model size                  | ~94 MB             | ~1.2 GB        |
-| RAM usage                   | ~813 MB            | ~2.5 GB        |
-| Latency (3s audio)          | ~0.25s             | ~7s            |
-| Est. monthly cost (Railway) | ~$13               | ~$26           |
-
-## 📄 License
-
-MIT
+Built on HuBERT and wav2vec 2.0 (Meta AI, Apache-2.0), g2p_en, and trained and evaluated with LibriSpeech and speechocean762 (both CC BY 4.0). Full credits and citations: [NOTICE](NOTICE).

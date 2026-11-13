@@ -3,40 +3,40 @@
 > Pronunciation Validation Service — directory layout & file descriptions
 
 ```
-pronuncation-validate/
+pronunciation-service/
 │
 ├── main.py                     # Entry point — uvicorn bootstrap, reads PORT from Settings
-├── requirements.txt            # Pinned Python dependencies
-├── pyproject.toml              # Project metadata, Black/Ruff/pytest config
-├── Dockerfile                  # Production image — bakes Wav2Vec2 model at build time
-├── railway.toml                # Railway PaaS config — Dockerfile builder, health check, restart policy
-├── debugs/                     # Diagnostic & benchmark scripts (not production)
-│   ├── benchmark.py            # Per-request resource benchmark (latency, RAM, CPU)
-│   ├── debug_gop_raw.py        # Raw GOP score analysis with Google TTS
-│   └── verify_scores.py        # Score verification after calibration changes
-├── README.md                   # Project overview & quick-start
-├── .env                        # Local environment variables (git-ignored)
+├── requirements.txt            # Pinned Python dependencies (service venv, CPU)
+├── pyproject.toml              # Black/Ruff/pytest config
+├── Dockerfile                  # Production image — bakes v1 model, downloads v2 files from a private HF repo
+├── nixpacks.toml               # Coolify/nixpacks build (same model steps)
+├── railway.toml                # Railway config — Dockerfile builder, health check, restart policy
+├── download_model.py           # Build-time model download (v1 from HF, v2 from V2_MODEL_REPO)
+├── index.html                  # Standalone bilingual (EN/VI) documentation page
+├── LICENSE, NOTICE             # Apache-2.0 and third-party credits
+├── README.md                   # Overview and quick start
 ├── .env.example                # Template for .env with all supported variables
-├── .dockerignore               # Excludes model_cache/, .env, __pycache__/, .git/
-├── .gitignore                  # Standard Python gitignore
-├── .github/
-│   └── copilot-instructions.md # AI coding assistant rules & project conventions
-├── docs/                       # Project docs
-│   ├── workflow.md             # Request flow & deployment diagrams
-│   └── structure.md            # Detailed directory documentation
+├── .dockerignore               # Excludes data/, model_cache/, .env, .venv-train/, ...
+├── .github/                    # AI coding assistant rules & project conventions
+├── docs/                       # Documentation (see docs/README.md)
+├── training/                   # Offline training/export of the v2 models (own CUDA venv)
+├── scripts/                    # speechocean762 evaluation harness, sanity set, HF upload
+├── debugs/                     # Benchmark (v1 and v2) and diagnostics
 ├── app/
 │   ├── __init__.py
 │   ├── application.py          # FastAPI app factory (create_app) + lifespan (model preload)
 │   │
 │   ├── api/                    # ── API Layer ──
 │   │   ├── __init__.py
-│   │   ├── dependencies.py     # DI: verify_api_key (APIKeyHeader), get_pronunciation_svc
-│   │   ├── middleware.py       # CORS + global exception handlers (Exception, ValueError)
+│   │   ├── dependencies.py     # DI: verify_api_key, get_pronunciation_svc, get_pronunciation_v2_svc (503 if model missing)
+│   │   ├── middleware.py       # CORS + rate limit + global exception handlers
+│   │   ├── upload.py           # Upload + reference-text validation shared by v1 and v2
 │   │   └── routes/
 │   │       ├── __init__.py     # Re-exports all routers (health, ipa, model_info,
 │   │       │                   #   pronunciation, transcribe)
 │   │       ├── health.py       # GET /health — public, no auth
 │   │       ├── pronunciation.py# POST /api/v1/evaluate — protected by X-API-Key
+│   │       ├── pronunciation_v2.py # POST /api/v2/evaluate — v1 shape + word timing
 │   │       ├── ipa.py          # GET /api/v1/text-analysis — text→IPA, protected
 │   │       ├── transcribe.py   # POST /api/v1/transcribe — audio→text, protected
 │   │       └── model_info.py   # GET /api/v1/model-info — public service metadata
@@ -103,8 +103,10 @@ pronuncation-validate/
 │   │   │                       #   Monotone detection: CV < threshold (0.08) → cap score at 30
 │   │   │                       #   Voiced ratio guard: <10% voiced → score 0
 │   │   │                       #   Singleton via @lru_cache → get_prosody_service()
-│   │   └── pronunciation_service.py
+│   │   ├── pronunciation_service.py
 │   │                           # Orchestrator — calls ASR → filler filter → IPA → GOP → Prosody
+│   │                           #   (_PHONEME_GROUPS, _align_phonemes, level/feedback, error types and break
+│   │                           #    detection now live in phoneme_align.py / scoring_rules.py and are re-exported)
 │   │                           #   filter_fillers() + text_to_words() applied consistently
 │   │                           #   _PHONEME_GROUPS (11 groups, 41 IPA, synced with above)
 │   │                           #   _align_words (plain Levenshtein) + _align_phonemes
@@ -123,6 +125,17 @@ pronuncation-validate/
 │   │                           #   prosody_score from ProsodyService.analyse()
 │   │                           #   overall = sort 4 sub-scores → 0.4×s0+0.2×s1+0.2×s2+0.2×s3
 │   │                           #   Singleton via @lru_cache → get_pronunciation_service()
+│   │   ├── phoneme_align.py    # Phone similarity groups + similarity-weighted DP alignment
+│   │   │                       #   (torch-free; shared by v1 and v2; max_phonemes argument)
+│   │   ├── scoring_rules.py    # Level/feedback text, word error types, break detection
+│   │   │                       #   (torch-free; shared by v1 and v2)
+│   │   └── v2/                 # ── Phoneme-native pipeline (no torch import) ──
+│   │       ├── phone_model.py  # ONNX HuBERT phone CTC → log-posteriors; checks model files exist
+│   │       ├── ctc_align.py    # numpy CTC Viterbi forced alignment (parity-tested vs torchaudio)
+│   │       ├── gop_features.py # Per-phone GOP features (LPP, LPR, duration), heard phones
+│   │       ├── scorer.py       # numpy phone MLP + word/utterance ridge heads (scorer.json)
+│   │       ├── analyser.py     # audio + reference text → V2Analysis
+│   │       └── pronunciation_v2_service.py  # response assembly, speech gates, score curve
 │   │
 │   └── utils/                  # ── Pure Utility Functions ──
 │       ├── __init__.py
@@ -132,21 +145,15 @@ pronuncation-validate/
 │                               #   FILLER_WORDS frozenset (uh, um, hmm, …)
 │                               #   Note: normalise_text strips hyphens — avoid hyphenated fillers
 │
-├── tests/                      # ── Test Suite (pytest + pytest-asyncio, 318 tests) ──
-│   ├── __init__.py
+├── tests/                      # ── Test Suite (pytest + pytest-asyncio, ~460 tests) ──
 │   ├── conftest.py             # Shared fixtures (mock services, async client, sample data)
-│   ├── test_api.py             # Integration tests for all 5 API endpoints
-│   ├── test_audio_utils.py     # Audio loading, normalisation, duration validation
-│   ├── test_dependencies.py    # API key auth (disabled, 401, 403, success)
-│   ├── test_gop_service.py     # GOP normalisation, quality levels, full scoring
-│   ├── test_ipa_service.py     # ARPAbet mapping, word→IPA, text→IPA conversion
-│   ├── test_phoneme_mappings.py # Cross-service mapping consistency (41 IPA symbols,
-│   │                           #   _ARPABET_TO_IPA ↔ _IPA_TO_WAV2VEC ↔ _PHONEME_GROUPS)
-│   ├── test_pronunciation_service.py # Alignment, similarity, error types, completeness,
-│   │                           #   fluency, break detection, prosody, evaluation
-│   ├── test_prosody_service.py # Prosody scoring, monotone detection, contour/variance/range,
-│   │                           #   voiced ratio guard, edge cases
-│   └── test_text_utils.py      # Text normalisation & tokenisation
+│   ├── test_api.py, test_api_v2.py                 # Endpoint integration tests (v1, v2)
+│   ├── test_pronunciation_service.py               # v1 alignment, error types, scores
+│   ├── test_pronunciation_v2_service.py            # v2 response assembly, gates, score curve
+│   ├── test_v2_ctc_align.py, test_v2_gop_features.py, test_v2_scorer.py,
+│   │   test_v2_model_files.py, test_v2_no_torch_import.py   # v2 components
+│   ├── test_scoring_sanity.py  # Score bands over tests/sanity_dataset (v1 and v2), noise gate
+│   └── ...                     # audio, auth, rate limit, concurrency, IPA/GOP/prosody, metrics
 │
 └── model_cache/                # Cached HuggingFace model files (git-ignored)
 ```
@@ -162,7 +169,9 @@ pronuncation-validate/
 | **Models**      | `app/models/schemas.py` | Pydantic v2 request/response schemas                        |
 | **Core**        | `app/core/`             | Settings (pydantic-settings), constants, logging (loguru)   |
 | **Utils**       | `app/utils/`            | Pure functions — audio I/O, text processing                 |
-| **Tests**       | `tests/`                | pytest + pytest-asyncio, 318 tests, `asyncio_mode = "auto"` |
+| **Tests**       | `tests/`                | pytest + pytest-asyncio, ~460 tests, `asyncio_mode = "auto"` |
+| **Training**    | `training/`             | Offline training/export of the v2 models, not imported by `app/` |
+| **Scripts**     | `scripts/`              | speechocean762 harness, sanity set, HF upload |
 
 ## Key Singleton Pattern
 
@@ -173,7 +182,9 @@ get_asr_service()            → ASRService (singleton)
 get_ipa_service()            → IPAService (singleton)
 get_gop_service()            → GOPService (singleton)
 get_prosody_service()        → ProsodyService (singleton)
-get_pronunciation_service()  → PronunciationService (singleton)
+get_pronunciation_service()  → PronunciationService (singleton, v1)
+get_v2_analyser()            → V2Analyser (ONNX model + g2p, singleton)
+get_pronunciation_v2_service() → PronunciationV2Service (singleton, v2)
 ```
 
 Services accept optional dependencies in `__init__` for testability — when `None` is passed, they fall back to the singleton getter.
@@ -186,4 +197,4 @@ Services accept optional dependencies in `__init__` for testability — when `No
                                                Used by: services, routes, main.py
 ```
 
-Important env vars: `PORT`, `ASR_MODEL_NAME`, `API_KEY`, `DEVICE`, `LOG_LEVEL`, `DEBUG`.
+Important env vars: `PORT`, `ASR_MODEL_NAME`, `API_KEY`, `DEVICE`, `LOG_LEVEL`, `DEBUG`, `PHONE_MODEL_DIR`, `PHONE_MODEL_INT8`. Full list: [configuration.md](configuration.md).
