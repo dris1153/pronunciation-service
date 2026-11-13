@@ -9,6 +9,7 @@ python-multipart==0.0.20
 torch==2.5.1
 torchaudio==2.5.1
 transformers==4.47.1
+onnxruntime==1.20.1  # v2 phone model runtime (torch-free)
 
 # Audio processing
 librosa==0.10.2.post1

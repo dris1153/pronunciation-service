@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     asr_model_name: str = "facebook/wav2vec2-base-960h"
     asr_model_cache_dir: str = "./model_cache"
     device: str = "cpu"  # "cpu" | "cuda"
+    # v2 phone CTC model: directory with model.onnx + vocab.json
+    phone_model_dir: str = "./data/models/hubert-phone-ctc"
 
     # ── Audio ────────────────────────────────────────────────
     audio_sample_rate: int = 16000

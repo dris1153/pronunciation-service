@@ -1,0 +1,13 @@
+# Offline training venv (.venv-train) — never imported by the service.
+# CUDA torch first:
+#   pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
+transformers==4.47.1
+soundfile==0.13.1
+numpy==1.26.4
+g2p-en==2.1.0
+loguru==0.7.3
+pydantic==2.10.4
+pydantic-settings==2.7.1
+pytest==8.3.4
+onnx==1.17.0
+onnxruntime==1.20.1

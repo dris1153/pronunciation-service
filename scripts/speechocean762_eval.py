@@ -13,6 +13,7 @@ Usage:
 
 Calls PronunciationService._evaluate_sync directly: no HTTP, no rate limit,
 no API key. Model and settings come from the environment / .env as usual.
+--api v2 runs the phone CTC analyser + learned scorer (scores are zero until scorer.json exists, see training/README.md).
 """
 from __future__ import annotations
 
@@ -41,6 +42,7 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--out", type=Path, required=True, help="JSONL predictions (appended)")
     p.add_argument("--report", type=Path, required=True, help="JSON metrics report")
     p.add_argument("--limit", type=int, default=0, help="Max utterances (0 = all)")
+    p.add_argument("--api", default="v1", choices=["v1", "v2"])
     p.add_argument("--report-only", action="store_true")
     return p.parse_args()
 
@@ -86,10 +88,37 @@ def _read_rows(path: Path) -> list[dict]:
     return list(rows.values())
 
 
-def run(args: argparse.Namespace) -> None:
-    from loguru import logger
+def _make_evaluator(api: str):
+    """``(wav_bytes, text) -> PronunciationResponse-shaped dict``."""
+    if api == "v2":
+        from app.core.config import get_settings
+        from app.services.v2.analyser import get_v2_analyser
+        from app.services.v2.scorer import UTT_TARGETS, Scores, Scorer
+        from app.utils.audio import load_audio_from_bytes
+        from v2_interim_response import to_interim_response
+
+        analyser = get_v2_analyser()
+        scorer_path = Path(get_settings().phone_model_dir) / "scorer.json"
+        scorer = Scorer.load(scorer_path) if scorer_path.exists() else None  # absent while collecting training features
+
+        def evaluate_v2(wav: bytes, text: str) -> dict:
+            analysis = analyser.analyse(load_audio_from_bytes(wav)[0], text)
+            if scorer is None:
+                zeros = Scores([[0.0] * len(w.phones) for w in analysis.words], [0.0] * len(analysis.words),
+                               dict.fromkeys(UTT_TARGETS, 0.0), 0.0)
+                return to_interim_response(analysis, zeros, 0.0)
+            return to_interim_response(analysis, scorer.score(analysis), scorer.mdd_threshold)
+
+        return evaluate_v2
 
     from app.services.pronunciation_service import get_pronunciation_service
+
+    svc = get_pronunciation_service()
+    return lambda wav, text: svc._evaluate_sync(wav, text).model_dump(mode="json")
+
+
+def run(args: argparse.Namespace) -> None:
+    from loguru import logger
 
     logger.remove()
     logger.add(sys.stderr, level="WARNING")
@@ -101,14 +130,16 @@ def run(args: argparse.Namespace) -> None:
     todo = [u for u in utts if u[0] not in done]
     print(f"{len(utts)} utterances, {len(done)} already scored, {len(todo)} to run")
 
-    svc = get_pronunciation_service()
+    evaluate = _make_evaluator(args.api)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     start = time.perf_counter()
     with args.out.open("a", encoding="utf-8") as fh:
         for i, (utt, wav, text, human) in enumerate(todo, 1):
             row: dict = {"utt_id": utt, "text": text, "human": human}
             try:
-                row["pred"] = svc._evaluate_sync(wav.read_bytes(), text).model_dump(mode="json")
+                t0 = time.perf_counter()
+                row["pred"] = evaluate(wav.read_bytes(), text)
+                row["ms"] = round((time.perf_counter() - t0) * 1000, 1)
             except Exception as exc:  # noqa: BLE001 — record and keep going
                 row["error"] = f"{type(exc).__name__}: {exc}"
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
