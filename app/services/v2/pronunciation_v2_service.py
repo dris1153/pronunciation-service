@@ -71,23 +71,37 @@ class PronunciationV2Service:
             return await asyncio.to_thread(self._evaluate_sync, audio_bytes, reference_text)
 
     def _evaluate_sync(self, audio_bytes: bytes, reference_text: str) -> PronunciationResponseV2:
-        start = time.perf_counter()
-        waveform, sr = load_audio_from_bytes(audio_bytes)
-        validate_audio_duration(waveform, sr)
-        if is_silent(waveform):
-            logger.warning("Silent audio detected — returning zero-score response")
-            return self._zero_score_response(reference_text)
+        start = lap_start = time.perf_counter()
+        stage_ms: dict[str, float] = {}
 
-        analysis = self._analyser.analyse(waveform, reference_text)
-        expected = sum(len(w.phones) for w in analysis.words)
-        if len(analysis.heard) < max(1, MIN_HEARD_RATIO * expected):
-            logger.warning("No speech evidence ({} phones heard, {} expected) — zero-score response",
-                           len(analysis.heard), expected)
-            return self._zero_score_response(reference_text)
-        scores = self._scorer.score(analysis)
-        response = self._build_response(reference_text, analysis, scores)
-        logger.bind(stage_ms={"total": round((time.perf_counter() - start) * 1000, 1)}).info("evaluate_timing")
-        return response
+        def lap(stage: str) -> None:
+            nonlocal lap_start
+            now = time.perf_counter()
+            stage_ms[stage] = round((now - lap_start) * 1000, 1)
+            lap_start = now
+
+        try:
+            waveform, sr = load_audio_from_bytes(audio_bytes)
+            validate_audio_duration(waveform, sr)
+            lap("decode")
+            stage_ms["audio_sec"] = round(len(waveform) / sr, 2)
+            if is_silent(waveform):
+                logger.warning("Silent audio detected — returning zero-score response")
+                return self._zero_score_response(reference_text)
+
+            analysis = self._analyser.analyse(waveform, reference_text, lap)
+            expected = sum(len(w.phones) for w in analysis.words)
+            if len(analysis.heard) < max(1, MIN_HEARD_RATIO * expected):
+                logger.warning("No speech evidence ({} phones heard, {} expected) — zero-score response",
+                               len(analysis.heard), expected)
+                return self._zero_score_response(reference_text)
+            scores = self._scorer.score(analysis)
+            response = self._build_response(reference_text, analysis, scores)
+            lap("score")
+            return response
+        finally:
+            stage_ms["total"] = round((time.perf_counter() - start) * 1000, 1)
+            logger.bind(stage_ms=stage_ms).info("evaluate_timing")
 
     # ── response assembly ────────────────────────────────────
 

@@ -108,3 +108,19 @@ def test_no_decoded_phones_gives_zero_score_not_extrapolated_score(monkeypatch):
 def test_speech_with_enough_heard_phones_is_scored(monkeypatch):
     # 4 expected phones, 1 heard (>= 20%): scored normally
     assert _evaluate(["a"], monkeypatch).overall_score > 0.0
+
+
+def test_evaluate_logs_per_stage_timing(monkeypatch):
+    from loguru import logger
+
+    records = []
+    sink = logger.add(lambda m: records.append(m.record), level="INFO")
+    try:
+        _evaluate(["a"], monkeypatch)
+    finally:
+        logger.remove(sink)
+    timing = [r["extra"]["stage_ms"] for r in records if r["message"] == "evaluate_timing"]
+    assert len(timing) == 1
+    # the analyser is a mock here, so only the service's own laps are recorded
+    assert {"decode", "audio_sec", "score", "total"} <= set(timing[0])
+    assert timing[0]["total"] >= timing[0]["decode"] + timing[0]["score"]

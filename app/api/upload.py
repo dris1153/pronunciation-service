@@ -1,4 +1,5 @@
 """Upload validation shared by the v1 and v2 evaluate routes."""
+import time
 from collections.abc import Awaitable, Callable
 from typing import TypeVar
 
@@ -58,11 +59,17 @@ async def evaluate_upload(
 
         # Pre-decode duration check (Phase 02 / Finding 11) — rejects
         # oversized MP3/OGG before the 25MB→500MB PCM blow-up.
+        precheck_start = time.perf_counter()
         await precheck_audio_duration(
             audio_bytes,
             content_type,
             float(get_settings().audio_max_duration_sec),
         )
+        logger.bind(
+            precheck_ms=round((time.perf_counter() - precheck_start) * 1000, 1),
+            mime=content_type,
+            upload_kb=round(len(audio_bytes) / 1024, 1),
+        ).info("upload_precheck")
 
         return await evaluate(audio_bytes, reference_text.strip())
 
