@@ -1,0 +1,48 @@
+name: Bad score report
+description: The score or the phoneme feedback looks wrong for your speech
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Scores for accents other than Mandarin-L1 speakers are the least tested part of this project, so these reports are very useful. Please do not paste recordings you are not allowed to share.
+  - type: dropdown
+    id: endpoint
+    attributes:
+      label: Endpoint
+      options:
+        - /api/v2/evaluate
+        - /api/v1/evaluate
+    validations:
+      required: true
+  - type: input
+    id: reference
+    attributes:
+      label: Reference text
+      description: The sentence the speaker was asked to read.
+    validations:
+      required: true
+  - type: input
+    id: speaker
+    attributes:
+      label: First language and accent
+      placeholder: "Vietnamese (Northern), adult, male"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Score you got and score you expected
+      description: Overall and, if relevant, the phoneme or word that looks wrong.
+    validations:
+      required: true
+  - type: textarea
+    id: audio
+    attributes:
+      label: Audio
+      description: A link to the recording, or a short description of how it was recorded (device, noise, format).
+  - type: textarea
+    id: response
+    attributes:
+      label: Response JSON (optional)
+      render: json
