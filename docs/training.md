@@ -1,4 +1,4 @@
-<!-- doc-id: docs-training | rev: 19280919 -->
+<!-- doc-id: docs-training | rev: 9feeca07 -->
 # Training the v2 models
 
 Offline work lives in [`training/`](../training/) and never ships in the service image. It uses its own CUDA venv (`.venv-train`) so the service venv stays CPU-only. Quick command list: [training/README.md](../training/README.md). This page explains what is trained, on what, and why.
@@ -65,4 +65,4 @@ Without `scorer.json` the harness still writes the per-phone features (scores ar
 
 ## Licences and data
 
-LibriSpeech and speechocean762 are CC BY 4.0 (credit in [NOTICE](../NOTICE)); the trained model is a derivative of HuBERT-base (Apache-2.0). L2-ARCTIC is **not** used: it is CC BY-NC. speechocean762 is Mandarin-L1, so a Vietnamese-L1 collection and annotation effort is the main open item ([evaluation.md](evaluation.md)).
+LibriSpeech and speechocean762 are CC BY 4.0 (credit in [NOTICE](../NOTICE)); the trained model is a derivative of HuBERT-base (Apache-2.0). L2-ARCTIC is **not** used: it is CC BY-NC. speechocean762 is Mandarin-L1, so collecting and annotating learners with other first languages is the main open item ([evaluation.md](evaluation.md)).

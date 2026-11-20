@@ -1,10 +1,10 @@
-<!-- doc-id: readme | rev: 0a1c8fac -->
+<!-- doc-id: readme | rev: 1429d642 -->
 <div align="center">
 
 # 🗣️ Pronunciation Validation Service
 
 **Phoneme-level English pronunciation scoring over a simple REST API.**
-Upload a recording and the sentence the speaker should have said; get per-phone, per-word and overall scores with the heard phones and word timing.
+Upload a recording and the sentence the speaker should have said; get per-phone, per-word and overall scores with the heard phones and word timing. Built for learners of English, whatever their first language.
 
 ![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
@@ -162,7 +162,7 @@ speechocean762 test split (2500 utterances, Mandarin-L1 learners), Pearson corre
 
 Phone model: 1.86% phone error rate on LibriSpeech test-clean. INT8 changes every metric by 0.004 or less.
 
-> ⚠️ **Honest limits.** All evaluation speakers are Mandarin-L1; **Vietnamese-L1 accuracy has not been measured** and no open Vietnamese-L1 dataset with pronunciation scores was found ([data plan](docs/evaluation.md#data-plan-for-vietnamese-learners)). The score curve was tuned on five synthetic clips. Speed numbers come from a dev box; re-run `debugs/benchmark.py` on your host. Details: [docs/evaluation.md](docs/evaluation.md).
+> ⚠️ **Honest limits.** All evaluation speakers are Mandarin-L1, so **accuracy for other first languages has not been measured**. The pipeline is L1-agnostic by design (it scores English phones against the reference text and has no L1-specific rules), but that is not validated beyond Mandarin-L1, and the one survey done so far (for Vietnamese) found no open, commercially usable dataset with pronunciation scores ([data plan](docs/evaluation.md#data-plan-for-more-first-languages)). The score curve was tuned on five synthetic clips. Speed numbers come from a dev box; re-run `debugs/benchmark.py` on your host. Details: [docs/evaluation.md](docs/evaluation.md).
 
 ## 🧰 Tech stack
 

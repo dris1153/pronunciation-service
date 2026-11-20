@@ -1,4 +1,4 @@
-<!-- doc-id: docs-internal-integration | rev: 59ec0cbb -->
+<!-- doc-id: docs-internal-integration | rev: bf352fba -->
 # Internal Microservice Integration Guide
 
 > **Audience:** backend developers integrating their service with this Pronunciation Validation Service over an internal network.
@@ -284,5 +284,5 @@ Request, auth, rate limit and error codes are identical to v1; only point the cl
 - `transcribed_text` is the heard IPA string (e.g. `jɛloʊ wɝd`), not the recognised words. Don't render it as a sentence.
 - `is_correct_ipa` is a learned verdict (flag-only F1 0.54 vs 0.31 for heard != expected; on speechocean762, 18% of phones are heard differently yet accepted, 0.3% heard correctly yet flagged). Never derive "wrong" by comparing `actual_ipa` with `expected_ipa` in the UI; a phone can be heard as a different symbol (`actual_ipa`) and still be accepted (accent-neutral variants), or heard correctly and flagged.
 - New per-word `start_ms` / `end_ms` for highlighting in a player.
-- Scores are on a different calibration than v1: do not compare v1 and v2 numbers or reuse thresholds. Calibrated against speechocean762 (Mandarin L1); Vietnamese-L1 accuracy has not been measured yet.
+- Scores are on a different calibration than v1: do not compare v1 and v2 numbers or reuse thresholds. Calibrated against speechocean762 (Mandarin L1); accuracy for other first languages has not been measured yet.
 - 503 with `v2 model is not available on this server.` means the image was built without the v2 files.

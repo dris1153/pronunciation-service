@@ -1,4 +1,4 @@
-<!-- doc-id: docs-evaluation | rev: e6f94b86 -->
+<!-- doc-id: docs-evaluation | rev: 918ee14a -->
 # Evaluation, benchmarks and tests
 
 ## Quality against expert scores
@@ -25,13 +25,13 @@ Notes: v2 numbers use the FP32 model; INT8 is within 0.004 on every metric (comp
 
 ### What this does not tell you
 
-- **Every speaker is Mandarin-L1.** Vietnamese learners make different errors (final consonants, th/dh, s/sh, clusters). No Vietnamese-L1 numbers exist yet.
+- **Every speaker is Mandarin-L1.** Learners with other first languages make different errors (final consonants, th/dh, consonant clusters, vowel length). No numbers exist yet for any other L1.
 - The sanity clips behind the score-curve exponent are five synthetic (gTTS) recordings.
 - The scorer was not validated on audio between 20 and 30 s.
 
-### Data plan for Vietnamese learners
+### Data plan for more first languages
 
-A survey found **no open, commercially usable Vietnamese-L1 English corpus with pronunciation scores**. L2-ARCTIC has four Vietnamese speakers but binary phone labels and a non-commercial licence; speechocean762 is Mandarin only; Vietnamese native-speech corpora do not contain English. The realistic route is to record and annotate learners with the speechocean762 protocol (3+ raters, phone 0-2 / word / utterance), starting with roughly 50-100 adult speakers and 500-1000 utterances to recalibrate the scorer.
+A survey done for Vietnamese found **no open, commercially usable English corpus with pronunciation scores for that L1**; other first languages have not been surveyed. L2-ARCTIC has 24 speakers across six first languages (four each) but binary phone labels and a non-commercial licence; speechocean762 is Mandarin only. The realistic route is to record and annotate learners with the speechocean762 protocol (3+ raters, phone 0-2 / word / utterance), one first language at a time, starting with roughly 50-100 adult speakers and 500-1000 utterances to validate or recalibrate the scorer for that L1.
 
 ## Latency and memory
 

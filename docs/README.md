@@ -1,4 +1,4 @@
-<!-- doc-id: docs-readme | rev: 0557f5e0 -->
+<!-- doc-id: docs-readme | rev: c17acd89 -->
 # Documentation
 
 | Page | What it covers |
@@ -8,7 +8,7 @@
 | [scoring-v2.md](scoring-v2.md) | How the phoneme-native pipeline scores speech, results, limits |
 | [scoring-v1.md](scoring-v1.md) | The original Wav2Vec2 pipeline: formulas and examples |
 | [scoring-constants.md](scoring-constants.md) | Why each scoring constant has its value (v1 and v2) |
-| [evaluation.md](evaluation.md) | Quality vs expert scores, latency, memory, tests, Vietnamese data plan |
+| [evaluation.md](evaluation.md) | Quality vs expert scores, latency, memory, tests, data plan for more first languages |
 | [training.md](training.md) | Training and exporting the v2 models, publishing artifacts |
 | [configuration.md](configuration.md) | All environment variables |
 | [deployment.md](deployment.md) | Docker, Railway, Coolify/nixpacks, Hugging Face artifacts, sizing |

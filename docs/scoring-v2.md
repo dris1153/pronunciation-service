@@ -1,4 +1,4 @@
-<!-- doc-id: docs-scoring-v2 | rev: 4b5806b4 -->
+<!-- doc-id: docs-scoring-v2 | rev: 809ff2ba -->
 # Scoring v2 (phoneme-native pipeline)
 
 How `POST /api/v2/evaluate` scores speech. Instead of transcribing words and comparing text (v1), a phone-level CTC model scores each **expected** phone directly, and a small learned model turns those signals into expert-style scores.
@@ -82,7 +82,7 @@ Mispronounced = expert phone score below 1.0 (4% of phones). Numbers are for the
 
 ## Limits
 
-- **L1 mismatch:** every speaker in the training and evaluation corpus has Mandarin as L1. Behaviour on Vietnamese learners is unmeasured; see [evaluation.md](evaluation.md) for the data plan.
+- **L1 mismatch:** every speaker in the training and evaluation corpus has Mandarin as L1. Behaviour for other first languages is unmeasured; see [evaluation.md](evaluation.md) for the data plan.
 - Scores for audio between 20 and 30 s are untested on the scorer side (speechocean762 clips are short); the phone model itself is fine there.
 - A reference with more than ~300 phones (100 words) is the practical ceiling; the alignment is quadratic in phone count.
 - Geminate phones across a word boundary (`that time`) collapse in CTC, so one /t/ can be reported as missing.
