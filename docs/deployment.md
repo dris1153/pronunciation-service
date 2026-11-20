@@ -1,13 +1,13 @@
-<!-- doc-id: docs-deployment | rev: f727b392 -->
+<!-- doc-id: docs-deployment | rev: 19243a73 -->
 # Deployment
 
-One container serves both pipelines. v1 weights come from Hugging Face public repos; the v2 files (`model.int8.onnx`, `vocab.json`, `scorer.json`) come from a **private** Hugging Face repo. Both are baked into the image at build time (no persistent volumes needed).
+One container serves both pipelines. v1 weights come from Hugging Face public repos; the v2 files (`model.int8.onnx`, `vocab.json`, `scorer.json`) come from a Hugging Face repo (`dris1153/pronunciation-v2`, public). Both are baked into the image at build time (no persistent volumes needed).
 
 ```mermaid
 flowchart LR
     train["training/ (GPU box)"] -->|"export_onnx --int8<br/>train_scorer"| files["model.int8.onnx<br/>vocab.json<br/>scorer.json"]
-    files -->|"scripts/upload_v2_model.py<br/>(HF_TOKEN, write)"| hf[("private HF repo<br/>dris1153/pronunciation-v2")]
-    hf -->|"download_model.py<br/>V2_MODEL_REPO + HF_TOKEN"| build["docker build /<br/>nixpacks build"]
+    files -->|"scripts/upload_v2_model.py<br/>(HF_TOKEN, write)"| hf[("HF repo<br/>dris1153/pronunciation-v2")]
+    hf -->|"download_model.py<br/>V2_MODEL_REPO"| build["docker build /<br/>nixpacks build"]
     pub[("facebook/wav2vec2-base-960h<br/>(public)")] -->|"download_model.py"| build
     build --> img["image: /app/model_cache<br/>+ /app/data/models/hubert-phone-ctc"]
     img --> run["python main.py<br/>(1 uvicorn worker)"]
@@ -22,7 +22,7 @@ $env:HF_TOKEN = "hf_xxx"          # write token, never commit it
 python scripts/upload_v2_model.py --repo dris1153/pronunciation-v2
 ```
 
-The script creates the repo as private (it does not change an existing public repo to private) and uploads the three files from `data/models/hubert-phone-ctc/`. Create a separate **read** token for builds.
+The script creates the repo as private if it does not exist (it never changes the visibility of an existing repo) and uploads the three files from `data/models/hubert-phone-ctc/`. The published repo is public, so builds need no token; for a private repo, create a separate **read** token for builds.
 
 ## Docker
 
@@ -30,9 +30,12 @@ The script creates the repo as private (it does not change an existing public re
 # v1 only (v2 endpoint will answer 503)
 docker build -t pronunciation-validator .
 
-# v1 + v2: the token travels as a BuildKit secret, so it never lands in an image layer
+# v1 + v2 (the model repo is public, no token needed)
+docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 -t pronunciation-validator .
+
+# private model repo: the token travels as a BuildKit secret, so it never lands in an image layer
 docker build \
-  --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 \
+  --build-arg V2_MODEL_REPO=<org>/<private-repo> \
   --secret id=HF_TOKEN,env=HF_TOKEN \
   -t pronunciation-validator .
 
@@ -41,17 +44,17 @@ docker run -p 8000:8000 -e API_KEY=<32+ char key> -e DEBUG=false pronunciation-v
 
 What the image does: `python:3.11-slim` + ffmpeg/libsndfile, CPU-only PyTorch (v1), `requirements.txt` (includes `onnxruntime` for v2), runs `download_model.py` (v1 model, then v2 files when `V2_MODEL_REPO` is set), switches to a non-root user, starts `python main.py`. `.dockerignore` excludes `data/` and `.venv-train/`, so local datasets never enter the build context.
 
-> **Status:** the Dockerfile and nixpacks download steps are written but **have not been run end to end yet**. Do one clean build with `V2_MODEL_REPO` and a token before relying on them, then check `docker history` for the token.
+> **Status:** the Dockerfile build has been run on Coolify (Docker build pack): it downloads the v2 files and v2 loads at startup. The nixpacks path has not been run. If you build with a token, check `docker history` once to confirm it is not in a layer.
 
 ## Railway
 
 `railway.toml` uses the Dockerfile builder, health check `GET /health` (120 s timeout) and restart on failure (3 retries). `PORT` is injected by Railway and read by pydantic-settings. Set `API_KEY`, `DEBUG=false` and the rest in the dashboard.
 
-For v2, Railway must expose `HF_TOKEN` to the build. Railway mounts build secrets by **service variable name**, which is why the Dockerfile secret id is `HF_TOKEN`. If no secret is mounted, the `HF_TOKEN` build arg is used instead. Without a token the v2 step fails when `V2_MODEL_REPO` is set; leave `V2_MODEL_REPO` unset to ship v1 only.
+For v2, set `V2_MODEL_REPO` as a build variable. Only a private repo also needs `HF_TOKEN` exposed to the build. Railway mounts build secrets by **service variable name**, which is why the Dockerfile secret id is `HF_TOKEN`. If no secret is mounted, the `HF_TOKEN` build arg is used instead. Leave `V2_MODEL_REPO` unset to ship v1 only.
 
 ## Coolify / nixpacks
 
-`nixpacks.toml` installs CPU PyTorch and `requirements.txt`, bakes the v1 model, then runs `python download_model.py --v2-only`. Set `V2_MODEL_REPO` and `HF_TOKEN` as **build variables**. Nixpacks can persist build variables into its generated image, so use a read-only token and rotate it if the image is ever shared. The app starts as `appuser` via `su`.
+`nixpacks.toml` installs CPU PyTorch and `requirements.txt`, bakes the v1 model, then runs `python download_model.py --v2-only`. Set `V2_MODEL_REPO` as a **build variable**; add `HF_TOKEN` only for a private repo (nixpacks can persist build variables into its generated image, so use a read-only token and rotate it if the image is ever shared). The app starts as `appuser` via `su`.
 
 ## Sizing and runtime rules
 

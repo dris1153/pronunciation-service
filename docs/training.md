@@ -1,4 +1,4 @@
-<!-- doc-id: docs-training | rev: 948a85b2 -->
+<!-- doc-id: docs-training | rev: 19280919 -->
 # Training the v2 models
 
 Offline work lives in [`training/`](../training/) and never ships in the service image. It uses its own CUDA venv (`.venv-train`) so the service venv stays CPU-only. Quick command list: [training/README.md](../training/README.md). This page explains what is trained, on what, and why.
@@ -12,7 +12,7 @@ flowchart LR
     ex --> feat
     feat --> sc["train_scorer.py<br/>phone MLP + ridge heads"]
     sc --> js["scorer.json"]
-    ex --> up["upload_v2_model.py<br/>private HF repo"]
+    ex --> up["upload_v2_model.py<br/>HF repo"]
     js --> up
 ```
 
@@ -61,7 +61,7 @@ Without `scorer.json` the harness still writes the per-phone features (scores ar
 
 ## 3. Publishing
 
-`scripts/upload_v2_model.py` uploads `model.int8.onnx`, `vocab.json` and `scorer.json` to the private Hugging Face repo that image builds download from ([deployment.md](deployment.md)). Whenever the phone model or the feature layout changes, retrain the scorer: `scorer.json` is tied to the exact feature order of the code that produced it (there is no version stamp yet).
+`scripts/upload_v2_model.py` uploads `model.int8.onnx`, `vocab.json` and `scorer.json` to the Hugging Face repo that image builds download from ([deployment.md](deployment.md)). Whenever the phone model or the feature layout changes, retrain the scorer: `scorer.json` is tied to the exact feature order of the code that produced it (there is no version stamp yet).
 
 ## Licences and data
 

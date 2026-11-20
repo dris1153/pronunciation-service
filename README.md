@@ -1,4 +1,4 @@
-<!-- doc-id: readme | rev: d10b8c91 -->
+<!-- doc-id: readme | rev: 0a1c8fac -->
 <div align="center">
 
 # 🗣️ Pronunciation Validation Service
@@ -56,7 +56,7 @@ flowchart LR
         sem --> v2["v2 pipeline<br/>ONNX phone CTC, GOP features, learned scorer"]
     end
     v1 --> w1[("Wav2Vec2 weights<br/>in the image")]
-    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>from a private HF repo at build time")]
+    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>from a Hugging Face repo at build time")]
 ```
 
 More diagrams (v1 vs v2, request sequence, startup): [docs/architecture.md](docs/architecture.md).
@@ -96,8 +96,7 @@ python main.py                                             # http://localhost:80
 The v1 model downloads from Hugging Face on first start. **v2 needs three files** in `data/models/hubert-phone-ctc/` (`model.int8.onnx`, `vocab.json`, `scorer.json`); without them `/api/v2/evaluate` answers `503` and v1 is unaffected.
 
 ```bash
-# fetch the v2 files from the private repo (needs a Hugging Face read token)
-huggingface-cli login
+# fetch the v2 files from the public Hugging Face repo (no token needed)
 huggingface-cli download dris1153/pronunciation-v2 model.int8.onnx vocab.json scorer.json --local-dir data/models/hubert-phone-ctc
 ```
 
@@ -129,7 +128,7 @@ curl -X POST http://localhost:8000/api/v2/evaluate \
 ### Docker
 
 ```bash
-docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 --secret id=HF_TOKEN,env=HF_TOKEN -t pronunciation-validator .
+docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 -t pronunciation-validator .
 docker run -p 8000:8000 -e API_KEY=<32+ char key> -e DEBUG=false pronunciation-validator
 ```
 

@@ -24,8 +24,8 @@ Names are case-insensitive. Unset variables fall back to the default shown.
 
 | Variable | Stage | Example / default | Notes |
 | --- | --- | --- | --- |
-| `V2_MODEL_REPO` | **Build** | `dris1153/pronunciation-v2` | Private HF repo with `model.int8.onnx`, `vocab.json`, `scorer.json`. Unset = v2 step skipped and `/api/v2/evaluate` answers 503. Not a `Settings` field: keep it out of runtime and out of `.env` |
-| `HF_TOKEN` | **Build** (secret) | `hf_xxx` (read-only) | Read by `download_model.py` only. Enable *Use Docker Build Secrets* in Coolify. The app never reads it, so leave Runtime off. Never commit it |
+| `V2_MODEL_REPO` | **Build** | `dris1153/pronunciation-v2` | Public HF repo with `model.int8.onnx`, `vocab.json`, `scorer.json`. Unset = v2 step skipped and `/api/v2/evaluate` answers 503. Not a `Settings` field: keep it out of runtime and out of `.env` |
+| `HF_TOKEN` | **Build** (secret) | `hf_xxx` (read-only) | Optional: only needed for a private `V2_MODEL_REPO`. Read by `download_model.py` only. In Coolify set Build secrets to *Docker BuildKit secrets*. The app never reads it, so leave Runtime off. Never commit it |
 
 The upload side uses a separate **write** token on your own machine: `HF_TOKEN=<write> python scripts/upload_v2_model.py --repo <org>/<repo>`.
 
@@ -96,6 +96,6 @@ The upload side uses a separate **write** token on your own machine: `HF_TOKEN=<
 | `DEBUG` = `false` | on | off |
 | `CORS_ORIGINS_STR` | on | off |
 | `V2_MODEL_REPO` | off | on |
-| `HF_TOKEN` | off | on (build secret) |
+| `HF_TOKEN` (private model repo only) | off | on (build secret) |
 
 Everything else can stay at its default. Other docs: [docs/configuration.md](docs/configuration.md), [docs/deployment.md](docs/deployment.md).

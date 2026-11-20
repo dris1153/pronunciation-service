@@ -52,7 +52,7 @@ ENV ASR_MODEL_NAME=${ASR_MODEL_NAME}
 # ----------------------------
 COPY download_model.py .
 
-# v2 phone model: private HF repo. Pass the token as a BuildKit secret so it never lands in a layer:
+# v2 phone model from a Hugging Face repo. A public repo needs no token; for a private one pass it as a BuildKit secret so it never lands in a layer:
 #   docker build --build-arg V2_MODEL_REPO=<org>/<repo> --secret id=HF_TOKEN,env=HF_TOKEN .
 # Without a mounted secret the HF_TOKEN build arg (if the platform injects one) is used as is.
 ARG V2_MODEL_REPO=""

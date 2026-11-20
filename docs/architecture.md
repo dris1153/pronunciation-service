@@ -1,4 +1,4 @@
-<!-- doc-id: docs-architecture | rev: f54d8e3a -->
+<!-- doc-id: docs-architecture | rev: ec588fa9 -->
 # Architecture
 
 ## System overview
@@ -14,7 +14,7 @@ flowchart LR
         mw --> misc["text-analysis, transcribe,<br/>model-info, health"]
     end
     v1 --> w1[("Wav2Vec2 weights<br/>baked into the image")]
-    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>from the private HF repo at build time")]
+    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>from the HF repo at build time")]
 ```
 
 Everything runs in one process because the models are large and loaded once; extra uvicorn workers would each load their own copy. CPU inference is bounded by a semaphore (`MAX_CONCURRENT_INFERENCES`), and the blocking work runs in a worker thread so the event loop stays free.

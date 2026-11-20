@@ -1,4 +1,4 @@
-<!-- doc-id: docs-structure | rev: 6c7dadfe -->
+<!-- doc-id: docs-structure | rev: ba3880de -->
 # Project Structure
 
 > Pronunciation Validation Service — directory layout & file descriptions
@@ -9,7 +9,7 @@ pronunciation-service/
 ├── main.py                     # Entry point — uvicorn bootstrap, reads PORT from Settings
 ├── requirements.txt            # Pinned Python dependencies (service venv, CPU)
 ├── pyproject.toml              # Black/Ruff/pytest config
-├── Dockerfile                  # Production image — bakes v1 model, downloads v2 files from a private HF repo
+├── Dockerfile                  # Production image — bakes v1 model, downloads v2 files from the HF repo
 ├── nixpacks.toml               # Coolify/nixpacks build (same model steps)
 ├── railway.toml                # Railway config — Dockerfile builder, health check, restart policy
 ├── download_model.py           # Build-time model download (v1 from HF, v2 from V2_MODEL_REPO)

@@ -1,4 +1,4 @@
-<!-- doc-id: docs-configuration | rev: 4502e42a -->
+<!-- doc-id: docs-configuration | rev: 1c1e2cda -->
 # Configuration
 
 All settings are environment variables (or entries in `.env`, resolved from the project root). Names are case-insensitive. The template is [`.env.example`](../.env.example); the source of truth is [`app/core/config.py`](../app/core/config.py).
@@ -78,6 +78,6 @@ Under Docker `--cpus` or Railway the CPU quota is invisible to the affinity prob
 
 | Name | Where | Description |
 | --- | --- | --- |
-| `V2_MODEL_REPO` | Docker build arg / nixpacks build variable | Private Hugging Face repo with the v2 files, for example `dris1153/pronunciation-v2` |
-| `HF_TOKEN` | Docker build secret (`--secret id=HF_TOKEN,env=HF_TOKEN`) / nixpacks build variable | Read token for that repo. Never commit it or bake it into an image layer |
+| `V2_MODEL_REPO` | Docker build arg / nixpacks build variable | Public Hugging Face repo with the v2 files, for example `dris1153/pronunciation-v2` |
+| `HF_TOKEN` | Docker build secret (`--secret id=HF_TOKEN,env=HF_TOKEN`) / nixpacks build variable | Only needed if that repo is private: a read token. Never commit it or bake it into an image layer |
 | `ASR_MODEL_NAME` | Docker build arg | Overrides the v1 model baked into the image |

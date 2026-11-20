@@ -3,7 +3,7 @@
     python download_model.py            # v1 ASR model + v2 phone model
     python download_model.py --v2-only  # v2 phone model only
 
-v2 files come from a private Hugging Face repo (V2_MODEL_REPO, token in HF_TOKEN).
+v2 files come from a Hugging Face repo (V2_MODEL_REPO; HF_TOKEN only if the repo is private).
 Without V2_MODEL_REPO the v2 step is skipped and /api/v2 answers 503.
 """
 import os

@@ -1624,7 +1624,7 @@ async def evaluate(audio: bytes, reference_text: str, user_id: str) -&gt; dict:
 
       <div class="callout">
         <strong data-i18n="s8_v2_t">v2 model files</strong>
-        <span data-i18n-html="s8_v2_b">The v2 files (<code>model.int8.onnx</code>, <code>vocab.json</code>, <code>scorer.json</code>) come from a private Hugging Face repo at build time: set <code>V2_MODEL_REPO</code> and <code>HF_TOKEN</code> as build variables. Without them <code>/api/v2/evaluate</code> returns 503 and v1 is unaffected. See <code>docs/deployment.md</code>.</span>
+        <span data-i18n-html="s8_v2_b">The v2 files (<code>model.int8.onnx</code>, <code>vocab.json</code>, <code>scorer.json</code>) come from a public Hugging Face repo at build time: set <code>V2_MODEL_REPO</code> as a build variable (<code>HF_TOKEN</code> only if the repo is private). Without them <code>/api/v2/evaluate</code> returns 503 and v1 is unaffected. See <code>docs/deployment.md</code>.</span>
       </div>
 
       <h3 data-i18n="s8_envvars_h">Environment variables (reference)</h3>
@@ -1959,7 +1959,7 @@ curl http://localhost:8000/api/v1/model-info | jq</code></pre>
         ep_eval2_diff_h: 'Differences from v1',
         ep_eval2_note_b: 'Abridged real output for a synthetic "yellow word" clip. Full reference: <code>docs/api.md</code> and <code>docs/scoring-v2.md</code> in the source repo.',
         s8_v2_t: 'v2 model files',
-        s8_v2_b: 'The v2 files (<code>model.int8.onnx</code>, <code>vocab.json</code>, <code>scorer.json</code>) come from a private Hugging Face repo at build time: set <code>V2_MODEL_REPO</code> and <code>HF_TOKEN</code> as build variables. Without them <code>/api/v2/evaluate</code> returns 503 and v1 is unaffected. See <code>docs/deployment.md</code>.',
+        s8_v2_b: 'The v2 files (<code>model.int8.onnx</code>, <code>vocab.json</code>, <code>scorer.json</code>) come from a public Hugging Face repo at build time: set <code>V2_MODEL_REPO</code> as a build variable (<code>HF_TOKEN</code> only if the repo is private). Without them <code>/api/v2/evaluate</code> returns 503 and v1 is unaffected. See <code>docs/deployment.md</code>.',
         // Final pass extras
         s4_step1: 'Step 1 — Per-word IPA alignment',
         s4_step2: 'Step 2 — GOP scoring (CTC log-prob normalised)',
@@ -2108,7 +2108,7 @@ curl http://localhost:8000/api/v1/model-info | jq</code></pre>
         ep_eval2_diff_h: 'Khác biệt so với v1',
         ep_eval2_note_b: 'Output thật rút gọn cho clip tổng hợp "yellow word". Tham chiếu đầy đủ: <code>docs/api.md</code> và <code>docs/scoring-v2.md</code> trong source repo.',
         s8_v2_t: 'File model v2',
-        s8_v2_b: 'Các file v2 (<code>model.int8.onnx</code>, <code>vocab.json</code>, <code>scorer.json</code>) được tải từ repo Hugging Face private lúc build: đặt <code>V2_MODEL_REPO</code> và <code>HF_TOKEN</code> làm build variable. Thiếu thì <code>/api/v2/evaluate</code> trả 503, v1 không bị ảnh hưởng. Xem <code>docs/deployment.md</code>.',
+        s8_v2_b: 'Các file v2 (<code>model.int8.onnx</code>, <code>vocab.json</code>, <code>scorer.json</code>) được tải từ repo Hugging Face public lúc build: đặt <code>V2_MODEL_REPO</code> làm build variable (<code>HF_TOKEN</code> chỉ cần nếu repo là private). Thiếu thì <code>/api/v2/evaluate</code> trả 503, v1 không bị ảnh hưởng. Xem <code>docs/deployment.md</code>.',
         // Final pass extras
         s4_step1: 'Bước 1 — Căn chỉnh IPA theo từng từ',
         s4_step2: 'Bước 2 — Chấm điểm GOP (chuẩn hoá CTC log-prob)',
@@ -2257,7 +2257,7 @@ curl http://localhost:8000/api/v1/model-info | jq</code></pre>
         ep_eval2_diff_h: '与 v1 的差异',
         ep_eval2_note_b: '合成音频 "yellow word" 的真实输出（已精简）。完整参考：源代码仓库中的 <code>docs/api.md</code> 与 <code>docs/scoring-v2.md</code>。',
         s8_v2_t: 'v2 模型文件',
-        s8_v2_b: 'v2 文件（<code>model.int8.onnx</code>、<code>vocab.json</code>、<code>scorer.json</code>）在构建时从私有 Hugging Face 仓库下载：请将 <code>V2_MODEL_REPO</code> 和 <code>HF_TOKEN</code> 设为构建变量。缺失时 <code>/api/v2/evaluate</code> 返回 503，v1 不受影响。参见 <code>docs/deployment.md</code>。',
+        s8_v2_b: 'v2 文件（<code>model.int8.onnx</code>、<code>vocab.json</code>、<code>scorer.json</code>）在构建时从公开的 Hugging Face 仓库下载：请将 <code>V2_MODEL_REPO</code> 设为构建变量（仅当仓库为私有时才需要 <code>HF_TOKEN</code>）。缺失时 <code>/api/v2/evaluate</code> 返回 503，v1 不受影响。参见 <code>docs/deployment.md</code>。',
         // Final pass extras
         s4_step1: '步骤 1 — 逐词 IPA 对齐',
         s4_step2: '步骤 2 — GOP 评分（CTC 对数概率归一化）',
@@ -2415,7 +2415,7 @@ curl http://localhost:8000/api/v1/model-info | jq</code></pre>
         ep_eval2_diff_h: 'v1との違い',
         ep_eval2_note_b: '合成音声 "yellow word" の実際の出力を抜粋したものです。完全なリファレンス: ソースリポジトリの <code>docs/api.md</code> と <code>docs/scoring-v2.md</code>。',
         s8_v2_t: 'v2のモデルファイル',
-        s8_v2_b: 'v2のファイル（<code>model.int8.onnx</code>、<code>vocab.json</code>、<code>scorer.json</code>）は、ビルド時に非公開のHugging Faceリポジトリから取得されます。<code>V2_MODEL_REPO</code> と <code>HF_TOKEN</code> をビルド変数として設定してください。設定がない場合、<code>/api/v2/evaluate</code> は503を返し、v1には影響しません。<code>docs/deployment.md</code> を参照してください。',
+        s8_v2_b: 'v2のファイル（<code>model.int8.onnx</code>、<code>vocab.json</code>、<code>scorer.json</code>）は、ビルド時に公開のHugging Faceリポジトリから取得されます。<code>V2_MODEL_REPO</code> をビルド変数として設定してください（<code>HF_TOKEN</code> はリポジトリが非公開の場合のみ必要です）。設定がない場合、<code>/api/v2/evaluate</code> は503を返し、v1には影響しません。<code>docs/deployment.md</code> を参照してください。',
         s4_step1: 'ステップ1 — 単語ごとのIPAアライメント',
         s4_step2: 'ステップ2 — GOP採点（CTC対数確率を正規化）',
         s4_step3: 'ステップ3 — 4つのサブスコアを計算',
@@ -2572,7 +2572,7 @@ curl http://localhost:8000/api/v1/model-info | jq</code></pre>
         ep_eval2_diff_h: 'Diferencias con v1',
         ep_eval2_note_b: 'Salida real abreviada para un clip sintético "yellow word". Referencia completa: <code>docs/api.md</code> y <code>docs/scoring-v2.md</code> en el repositorio de código.',
         s8_v2_t: 'Archivos del modelo v2',
-        s8_v2_b: 'Los archivos de v2 (<code>model.int8.onnx</code>, <code>vocab.json</code>, <code>scorer.json</code>) se descargan en la compilación desde un repositorio privado de Hugging Face: define <code>V2_MODEL_REPO</code> y <code>HF_TOKEN</code> como variables de compilación. Sin ellas, <code>/api/v2/evaluate</code> devuelve 503 y v1 no se ve afectado. Consulta <code>docs/deployment.md</code>.',
+        s8_v2_b: 'Los archivos de v2 (<code>model.int8.onnx</code>, <code>vocab.json</code>, <code>scorer.json</code>) se descargan en la compilación desde un repositorio público de Hugging Face: define <code>V2_MODEL_REPO</code> como variable de compilación (<code>HF_TOKEN</code> solo si el repositorio es privado). Sin ellas, <code>/api/v2/evaluate</code> devuelve 503 y v1 no se ve afectado. Consulta <code>docs/deployment.md</code>.',
         s4_step1: 'Paso 1 — Alineación IPA por palabra',
         s4_step2: 'Paso 2 — Puntuación GOP (log-prob de CTC normalizado)',
         s4_step3: 'Paso 3 — Calcular las cuatro subpuntuaciones',
