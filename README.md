@@ -1,4 +1,4 @@
-<!-- doc-id: readme | rev: 8199879a -->
+<!-- doc-id: readme | rev: d10b8c91 -->
 <div align="center">
 
 # 🗣️ Pronunciation Validation Service
@@ -212,7 +212,7 @@ Tests that need the real v2 model files skip themselves when the files are absen
 
 ## 🤝 Contributing
 
-Keep files under about 200 lines, follow the existing structure (`docs/structure.md`), and run the tests before pushing. English docs are the source of truth for the translations in [`languages/`](languages/README.md): after editing one, run `python scripts/docs_sync.py bump` (rules in [AGENTS.md](AGENTS.md)). Changes to scoring need a before/after run of the speechocean762 harness ([docs/evaluation.md](docs/evaluation.md)).
+New here? Start with [CONTRIBUTING.md](CONTRIBUTING.md) and a [good first issue](https://github.com/dris1153/pronunciation-service/labels/good%20first%20issue); everyone is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md). Keep files under about 200 lines, follow the existing structure (`docs/structure.md`), and run the tests before pushing. English docs are the source of truth for the translations in [`languages/`](languages/README.md): after editing one, run `python scripts/docs_sync.py bump` (rules in [AGENTS.md](AGENTS.md)). Changes to scoring need a before/after run of the speechocean762 harness ([docs/evaluation.md](docs/evaluation.md)).
 
 ## 📄 License and credits
 
