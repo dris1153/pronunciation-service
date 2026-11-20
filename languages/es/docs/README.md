@@ -1,6 +1,6 @@
-<!-- doc-id: docs-readme | lang: es | source-rev: 0557f5e0 -->
+<!-- doc-id: docs-readme | lang: es | source-rev: c17acd89 -->
 
-> 🌐 **Traducción al español** de [`docs/README.md`](../../../docs/README.md) (rev `0557f5e0`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
+> 🌐 **Traducción al español** de [`docs/README.md`](../../../docs/README.md) (rev `c17acd89`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
 
 # Documentación
 
@@ -11,7 +11,7 @@
 | [scoring-v2.md](scoring-v2.md) | Cómo puntúa el habla el pipeline nativo de fonemas, resultados, límites |
 | [scoring-v1.md](scoring-v1.md) | El pipeline original con Wav2Vec2: fórmulas y ejemplos |
 | [scoring-constants.md](scoring-constants.md) | Por qué cada constante de puntuación tiene su valor (v1 y v2) |
-| [evaluation.md](evaluation.md) | Calidad frente a las puntuaciones de expertos, latencia, memoria, pruebas, plan de datos para vietnamita |
+| [evaluation.md](evaluation.md) | Calidad frente a las puntuaciones de expertos, latencia, memoria, pruebas, plan de datos para más lenguas maternas |
 | [training.md](training.md) | Entrenamiento y exportación de los modelos v2, publicación de los archivos |
 | [configuration.md](configuration.md) | Todas las variables de entorno |
 | [deployment.md](deployment.md) | Docker, Railway, Coolify/nixpacks, archivos en Hugging Face, dimensionamiento |

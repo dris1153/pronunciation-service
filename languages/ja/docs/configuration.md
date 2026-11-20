@@ -1,6 +1,6 @@
-<!-- doc-id: docs-configuration | lang: ja | source-rev: e26350fb -->
+<!-- doc-id: docs-configuration | lang: ja | source-rev: 1c1e2cda -->
 
-> 🌐 [`docs/configuration.md`](../../../docs/configuration.md)（rev `e26350fb`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
+> 🌐 [`docs/configuration.md`](../../../docs/configuration.md)（rev `1c1e2cda`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
 
 # 設定
 
@@ -81,6 +81,6 @@ Docker の `--cpus` や Railway では、CPU クォータがアフィニティ�
 
 | 名前 | 設定場所 | 説明 |
 | --- | --- | --- |
-| `V2_MODEL_REPO` | Docker のビルド引数 / nixpacks のビルド変数 | v2 のファイルを置いたプライベートな Hugging Face リポジトリ。例: `dris1153/pronunciation-v2` |
-| `HF_TOKEN` | Docker のビルドシークレット（`--secret id=hf_token,env=HF_TOKEN`）/ nixpacks のビルド変数 | そのリポジトリの読み取りトークン。コミットしたり、イメージのレイヤーに焼き込んだりしないこと |
+| `V2_MODEL_REPO` | Docker のビルド引数 / nixpacks のビルド変数 | v2 のファイルを置いた公開の Hugging Face リポジトリ。例: `dris1153/pronunciation-v2` |
+| `HF_TOKEN` | Docker のビルドシークレット（`--secret id=HF_TOKEN,env=HF_TOKEN`）/ nixpacks のビルド変数 | そのリポジトリが非公開の場合のみ必要な読み取りトークン。コミットしたり、イメージのレイヤーに焼き込んだりしないこと |
 | `ASR_MODEL_NAME` | Docker のビルド引数 | イメージに組み込まれる v1 モデルを上書きする |

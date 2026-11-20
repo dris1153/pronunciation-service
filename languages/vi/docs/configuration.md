@@ -1,6 +1,6 @@
-<!-- doc-id: docs-configuration | lang: vi | source-rev: e26350fb -->
+<!-- doc-id: docs-configuration | lang: vi | source-rev: 1c1e2cda -->
 
-> 🌐 **Bản dịch tiếng Việt** của [`docs/configuration.md`](../../../docs/configuration.md) (rev `e26350fb`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
+> 🌐 **Bản dịch tiếng Việt** của [`docs/configuration.md`](../../../docs/configuration.md) (rev `1c1e2cda`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
 
 # Cấu hình
 
@@ -81,6 +81,6 @@ Dưới Docker `--cpus` hoặc Railway, hạn mức CPU không hiện ra với b
 
 | Tên | Ở đâu | Mô tả |
 | --- | --- | --- |
-| `V2_MODEL_REPO` | Build arg của Docker / build variable của nixpacks | Repo Hugging Face riêng tư chứa các tệp v2, ví dụ `dris1153/pronunciation-v2` |
-| `HF_TOKEN` | Build secret của Docker (`--secret id=hf_token,env=HF_TOKEN`) / build variable của nixpacks | Token đọc cho repo đó. Không bao giờ commit hoặc nhúng vào một layer của image |
+| `V2_MODEL_REPO` | Build arg của Docker / build variable của nixpacks | Repo Hugging Face công khai chứa các tệp v2, ví dụ `dris1153/pronunciation-v2` |
+| `HF_TOKEN` | Build secret của Docker (`--secret id=HF_TOKEN,env=HF_TOKEN`) / build variable của nixpacks | Chỉ cần nếu repo đó là riêng tư: một token đọc. Không bao giờ commit hoặc nhúng vào một layer của image |
 | `ASR_MODEL_NAME` | Build arg của Docker | Ghi đè model v1 được đóng sẵn trong image |

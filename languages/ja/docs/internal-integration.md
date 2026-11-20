@@ -1,6 +1,6 @@
-<!-- doc-id: docs-internal-integration | lang: ja | source-rev: 59ec0cbb -->
+<!-- doc-id: docs-internal-integration | lang: ja | source-rev: bf352fba -->
 
-> 🌐 [`docs/internal-integration.md`](../../../docs/internal-integration.md)（rev `59ec0cbb`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
+> 🌐 [`docs/internal-integration.md`](../../../docs/internal-integration.md)（rev `bf352fba`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
 
 # 内部マイクロサービス連携ガイド
 
@@ -287,5 +287,5 @@ TRUSTED_PROXY_CIDRS_STR=172.18.0.0/16
 - `transcribed_text` は、認識された単語ではなく、認識された IPA 文字列（例: `jɛloʊ wɝd`）です。文として表示しないでください。
 - `is_correct_ipa` は学習済みの判定です（フラグのみの F1 は 0.54 で、認識された音 != 期待される音の場合の 0.31 を上回ります。speechocean762 では、音素の 18% は異なる音として認識されても許容され、0.3% は正しく認識されても誤りと判定されます）。UI で `actual_ipa` と `expected_ipa` を比較して「誤り」を導出しないでください。音素は異なる記号（`actual_ipa`）として認識されても許容されることがあり（アクセント中立の変種）、正しく認識されても誤りと判定されることがあります。
 - 単語ごとに `start_ms` / `end_ms` が新たに追加されました。プレーヤーでのハイライトに使えます。
-- スコアは v1 とは異なるキャリブレーションです。v1 と v2 の数値を比較したり、しきい値を流用したりしないでください。speechocean762（中国語が母語）に対してキャリブレーションされており、ベトナム語を母語とする話者での正確さはまだ測定されていません。
+- スコアは v1 とは異なるキャリブレーションです。v1 と v2 の数値を比較したり、しきい値を流用したりしないでください。キャリブレーションは speechocean762（母語は中国語）に基づいており、他の母語での正確さはまだ測定されていません。
 - `v2 model is not available on this server.` を伴う 503 は、v2 のファイルなしでイメージがビルドされたことを意味します。

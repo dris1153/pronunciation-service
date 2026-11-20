@@ -1,6 +1,6 @@
-<!-- doc-id: docs-configuration | lang: zh | source-rev: e26350fb -->
+<!-- doc-id: docs-configuration | lang: zh | source-rev: 1c1e2cda -->
 
-> 🌐 **中文翻译**，源文件 [`docs/configuration.md`](../../../docs/configuration.md)（rev `e26350fb`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
+> 🌐 **中文翻译**，源文件 [`docs/configuration.md`](../../../docs/configuration.md)（rev `1c1e2cda`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
 
 # 配置
 
@@ -81,6 +81,6 @@
 
 | 名称 | 位置 | 说明 |
 | --- | --- | --- |
-| `V2_MODEL_REPO` | Docker 构建参数 / nixpacks 构建变量 | 存放 v2 文件的私有 Hugging Face 仓库，例如 `dris1153/pronunciation-v2` |
-| `HF_TOKEN` | Docker 构建 secret（`--secret id=hf_token,env=HF_TOKEN`）/ nixpacks 构建变量 | 该仓库的读取令牌。切勿提交它，也不要将其写入镜像层 |
+| `V2_MODEL_REPO` | Docker 构建参数 / nixpacks 构建变量 | 存放 v2 文件的公开 Hugging Face 仓库，例如 `dris1153/pronunciation-v2` |
+| `HF_TOKEN` | Docker 构建 secret（`--secret id=HF_TOKEN,env=HF_TOKEN`）/ nixpacks 构建变量 | 仅当该仓库为私有时才需要：一个读取令牌。切勿提交它，也不要将其写入镜像层 |
 | `ASR_MODEL_NAME` | Docker 构建参数 | 覆盖镜像中内置的 v1 模型 |

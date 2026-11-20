@@ -1,6 +1,6 @@
-<!-- doc-id: docs-training | lang: vi | source-rev: 948a85b2 -->
+<!-- doc-id: docs-training | lang: vi | source-rev: 9feeca07 -->
 
-> 🌐 **Bản dịch tiếng Việt** của [`docs/training.md`](../../../docs/training.md) (rev `948a85b2`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
+> 🌐 **Bản dịch tiếng Việt** của [`docs/training.md`](../../../docs/training.md) (rev `9feeca07`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
 
 # Huấn luyện các model v2
 
@@ -15,7 +15,7 @@ flowchart LR
     ex --> feat
     feat --> sc["train_scorer.py<br/>MLP phone + các đầu ridge"]
     sc --> js["scorer.json"]
-    ex --> up["upload_v2_model.py<br/>repo HF riêng tư"]
+    ex --> up["upload_v2_model.py<br/>repo HF"]
     js --> up
 ```
 
@@ -64,8 +64,8 @@ Không có `scorer.json`, harness vẫn ghi các đặc trưng theo từng phone
 
 ## 3. Công bố
 
-`scripts/upload_v2_model.py` tải `model.int8.onnx`, `vocab.json` và `scorer.json` lên repo Hugging Face riêng tư mà các lần build image tải về ([deployment.md](deployment.md)). Mỗi khi model phone hoặc bố cục đặc trưng thay đổi, hãy huấn luyện lại bộ chấm: `scorer.json` gắn với đúng thứ tự đặc trưng của đoạn code đã tạo ra nó (hiện chưa có dấu phiên bản).
+`scripts/upload_v2_model.py` tải `model.int8.onnx`, `vocab.json` và `scorer.json` lên repo Hugging Face mà các lần build image tải về ([deployment.md](deployment.md)). Mỗi khi model phone hoặc bố cục đặc trưng thay đổi, hãy huấn luyện lại bộ chấm: `scorer.json` gắn với đúng thứ tự đặc trưng của đoạn code đã tạo ra nó (hiện chưa có dấu phiên bản).
 
 ## Giấy phép và dữ liệu
 
-LibriSpeech và speechocean762 là CC BY 4.0 (ghi công trong [NOTICE](../../../NOTICE)); model đã huấn luyện là sản phẩm phái sinh của HuBERT-base (Apache-2.0). L2-ARCTIC **không** được dùng: nó là CC BY-NC. speechocean762 có L1 là tiếng Quan Thoại, nên nỗ lực thu thập và gán nhãn dữ liệu L1 tiếng Việt là hạng mục mở chính ([evaluation.md](evaluation.md)).
+LibriSpeech và speechocean762 là CC BY 4.0 (ghi công trong [NOTICE](../../../NOTICE)); model đã huấn luyện là sản phẩm phái sinh của HuBERT-base (Apache-2.0). L2-ARCTIC **không** được dùng: nó là CC BY-NC. speechocean762 có L1 là tiếng Quan Thoại, nên việc thu thập và gán nhãn dữ liệu người học có tiếng mẹ đẻ khác là hạng mục mở chính ([evaluation.md](evaluation.md)).

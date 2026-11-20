@@ -1,6 +1,6 @@
-<!-- doc-id: docs-architecture | lang: ja | source-rev: f54d8e3a -->
+<!-- doc-id: docs-architecture | lang: ja | source-rev: ec588fa9 -->
 
-> 🌐 [`docs/architecture.md`](../../../docs/architecture.md)（rev `f54d8e3a`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
+> 🌐 [`docs/architecture.md`](../../../docs/architecture.md)（rev `ec588fa9`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
 
 # アーキテクチャ
 
@@ -17,7 +17,7 @@ flowchart LR
         mw --> misc["text-analysis、transcribe、<br/>model-info、health"]
     end
     v1 --> w1[("Wav2Vec2 の重み<br/>イメージに組み込み済み")]
-    v2 --> w2[("model.int8.onnx、vocab.json、scorer.json<br/>ビルド時にプライベート HF リポジトリから取得")]
+    v2 --> w2[("model.int8.onnx、vocab.json、scorer.json<br/>ビルド時に HF リポジトリから取得")]
 ```
 
 モデルは大きく、一度だけロードされるため、すべてが 1 つのプロセスで動作します。uvicorn のワーカーを増やすと、ワーカーごとにモデルのコピーをロードしてしまいます。CPU 推論はセマフォ（`MAX_CONCURRENT_INFERENCES`）で上限が決まり、ブロッキングする処理はワーカースレッドで実行されるため、イベントループは空いたままになります。

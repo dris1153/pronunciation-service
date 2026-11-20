@@ -1,13 +1,13 @@
-<!-- doc-id: readme | lang: es | source-rev: 078fdfd7 -->
+<!-- doc-id: readme | lang: es | source-rev: 1429d642 -->
 
-> 🌐 **Traducción al español** de [`README.md`](../../README.md) (rev `078fdfd7`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
+> 🌐 **Traducción al español** de [`README.md`](../../README.md) (rev `1429d642`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
 
 <div align="center">
 
 # 🗣️ Pronunciation Validation Service
 
 **Puntuación de la pronunciación del inglés a nivel de fonema mediante una API REST sencilla.**
-Sube una grabación y la frase que el hablante debía decir; obtén puntuaciones por fonema, por palabra y globales, junto con los fonemas oídos y los tiempos por palabra.
+Sube una grabación y la frase que el hablante debía decir; obtén puntuaciones por fonema, por palabra y globales, junto con los fonemas oídos y los tiempos por palabra. Pensado para estudiantes de inglés, sea cual sea su lengua materna.
 
 ![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
@@ -59,7 +59,7 @@ flowchart LR
         sem --> v2["Pipeline v2<br/>phone CTC en ONNX, características GOP, evaluador aprendido"]
     end
     v1 --> w1[("Pesos de Wav2Vec2<br/>en la imagen")]
-    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>desde un repo HF privado en el build")]
+    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>desde un repo de Hugging Face en el build")]
 ```
 
 Más diagramas (v1 frente a v2, secuencia de una petición, arranque): [docs/architecture.md](docs/architecture.md).
@@ -99,8 +99,7 @@ python main.py                                             # http://localhost:80
 El modelo v1 se descarga de Hugging Face en el primer arranque. **v2 necesita tres archivos** en `data/models/hubert-phone-ctc/` (`model.int8.onnx`, `vocab.json`, `scorer.json`); sin ellos `/api/v2/evaluate` responde `503` y v1 no se ve afectado.
 
 ```bash
-# fetch the v2 files from the private repo (needs a Hugging Face read token)
-huggingface-cli login
+# fetch the v2 files from the public Hugging Face repo (no token needed)
 huggingface-cli download dris1153/pronunciation-v2 model.int8.onnx vocab.json scorer.json --local-dir data/models/hubert-phone-ctc
 ```
 
@@ -132,7 +131,7 @@ curl -X POST http://localhost:8000/api/v2/evaluate \
 ### Docker
 
 ```bash
-docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 --secret id=hf_token,env=HF_TOKEN -t pronunciation-validator .
+docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 -t pronunciation-validator .
 docker run -p 8000:8000 -e API_KEY=<32+ char key> -e DEBUG=false pronunciation-validator
 ```
 
@@ -166,7 +165,7 @@ División de prueba de speechocean762 (2500 enunciados, estudiantes con L1 manda
 
 Modelo de fonemas: 1.86% de tasa de error de fonemas en LibriSpeech test-clean. INT8 modifica cada métrica en 0.004 o menos.
 
-> ⚠️ **Límites sinceros.** Todos los hablantes de evaluación tienen L1 mandarín; **la precisión con L1 vietnamita no se ha medido** y no se encontró ningún conjunto de datos abierto con L1 vietnamita y puntuaciones de pronunciación ([plan de datos](docs/evaluation.md#plan-de-datos-para-estudiantes-vietnamitas)). La curva de puntuación se ajustó con cinco clips sintéticos. Las cifras de velocidad provienen de una máquina de desarrollo; vuelve a ejecutar `debugs/benchmark.py` en tu host. Detalles: [docs/evaluation.md](docs/evaluation.md).
+> ⚠️ **Límites sinceros.** Todos los hablantes de evaluación tienen L1 mandarín, así que **la precisión con otras lenguas maternas no se ha medido**. El pipeline es agnóstico a la L1 por diseño (puntúa fonemas del inglés frente al texto de referencia y no tiene reglas específicas de ninguna L1), pero eso no está validado fuera del mandarín, y la única encuesta realizada hasta ahora (para vietnamita) no encontró ningún conjunto de datos abierto y de uso comercial con puntuaciones de pronunciación ([plan de datos](docs/evaluation.md#plan-de-datos-para-más-lenguas-maternas)). La curva de puntuación se ajustó con cinco clips sintéticos. Las cifras de velocidad vienen de una máquina de desarrollo; vuelve a ejecutar `debugs/benchmark.py` en tu host. Detalles: [docs/evaluation.md](docs/evaluation.md).
 
 ## 🧰 Stack tecnológico
 
@@ -215,7 +214,7 @@ Las pruebas que necesitan los archivos reales del modelo v2 se omiten solas cuan
 
 ## 🤝 Contribuir
 
-Mantén los archivos por debajo de unas 200 líneas, sigue la estructura existente (`docs/structure.md`) y ejecuta las pruebas antes de hacer push. La documentación en inglés es la fuente de verdad de las traducciones en [`languages/`](../README.md): tras editar una, ejecuta `python scripts/docs_sync.py bump` (reglas en [AGENTS.md](../../AGENTS.md)). Los cambios en la puntuación requieren una ejecución antes/después del harness de speechocean762 ([docs/evaluation.md](docs/evaluation.md)).
+¿Eres nuevo? Empieza por [CONTRIBUTING.md](../../CONTRIBUTING.md) y un [good first issue](https://github.com/dris1153/pronunciation-service/labels/good%20first%20issue); se espera que todos sigan el [Código de conducta](../../CODE_OF_CONDUCT.md). Mantén los archivos por debajo de unas 200 líneas, sigue la estructura existente (`docs/structure.md`) y ejecuta las pruebas antes de hacer push. La documentación en inglés es la fuente de verdad de las traducciones en [`languages/`](../README.md): tras editar una, ejecuta `python scripts/docs_sync.py bump` (reglas en [AGENTS.md](../../AGENTS.md)). Los cambios en la puntuación requieren una ejecución antes/después del harness de speechocean762 ([docs/evaluation.md](docs/evaluation.md)).
 
 ## 📄 Licencia y créditos
 

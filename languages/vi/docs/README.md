@@ -1,6 +1,6 @@
-<!-- doc-id: docs-readme | lang: vi | source-rev: 0557f5e0 -->
+<!-- doc-id: docs-readme | lang: vi | source-rev: c17acd89 -->
 
-> 🌐 **Bản dịch tiếng Việt** của [`docs/README.md`](../../../docs/README.md) (rev `0557f5e0`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
+> 🌐 **Bản dịch tiếng Việt** của [`docs/README.md`](../../../docs/README.md) (rev `c17acd89`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
 
 # Tài liệu
 
@@ -11,7 +11,7 @@
 | [scoring-v2.md](scoring-v2.md) | Cách pipeline thuần phoneme chấm điểm giọng nói, kết quả, giới hạn |
 | [scoring-v1.md](scoring-v1.md) | Pipeline Wav2Vec2 gốc: công thức và ví dụ |
 | [scoring-constants.md](scoring-constants.md) | Vì sao mỗi hằng số chấm điểm có giá trị như vậy (v1 và v2) |
-| [evaluation.md](evaluation.md) | Chất lượng so với điểm chuyên gia, độ trễ, bộ nhớ, test, kế hoạch dữ liệu tiếng Việt |
+| [evaluation.md](evaluation.md) | Chất lượng so với điểm chuyên gia, độ trễ, bộ nhớ, test, kế hoạch dữ liệu cho thêm các ngôn ngữ mẹ đẻ |
 | [training.md](training.md) | Huấn luyện và export các model v2, công bố các tệp model |
 | [configuration.md](configuration.md) | Tất cả biến môi trường |
 | [deployment.md](deployment.md) | Docker, Railway, Coolify/nixpacks, các tệp model trên Hugging Face, định cỡ tài nguyên |

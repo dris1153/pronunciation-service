@@ -1,6 +1,6 @@
-<!-- doc-id: docs-readme | lang: zh | source-rev: 0557f5e0 -->
+<!-- doc-id: docs-readme | lang: zh | source-rev: c17acd89 -->
 
-> 🌐 **中文翻译**，源文件 [`docs/README.md`](../../../docs/README.md)（rev `0557f5e0`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
+> 🌐 **中文翻译**，源文件 [`docs/README.md`](../../../docs/README.md)（rev `c17acd89`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
 
 # 文档
 
@@ -11,7 +11,7 @@
 | [scoring-v2.md](scoring-v2.md) | 音素原生流水线如何为语音评分、结果、局限 |
 | [scoring-v1.md](scoring-v1.md) | 原始 Wav2Vec2 流水线：公式和示例 |
 | [scoring-constants.md](scoring-constants.md) | 每个评分常量取该值的原因（v1 和 v2） |
-| [evaluation.md](evaluation.md) | 与专家评分的质量对比、延迟、内存、测试、越南语数据计划 |
+| [evaluation.md](evaluation.md) | 与专家评分的质量对比、延迟、内存、测试、更多母语的数据计划 |
 | [training.md](training.md) | 训练并导出 v2 模型、发布模型文件 |
 | [configuration.md](configuration.md) | 所有环境变量 |
 | [deployment.md](deployment.md) | Docker、Railway、Coolify/nixpacks、Hugging Face 模型文件、资源规格 |

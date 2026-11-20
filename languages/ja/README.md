@@ -1,13 +1,13 @@
-<!-- doc-id: readme | lang: ja | source-rev: 078fdfd7 -->
+<!-- doc-id: readme | lang: ja | source-rev: 1429d642 -->
 
-> 🌐 [`README.md`](../../README.md)（rev `078fdfd7`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
+> 🌐 [`README.md`](../../README.md)（rev `1429d642`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
 
 <div align="center">
 
 # 🗣️ 発音検証サービス
 
 **シンプルな REST API で提供する、音素レベルの英語発音採点。**
-録音データと話者が言うべきだった文を送信すると、音素ごと・単語ごと・全体のスコアに加え、認識された音素と単語タイミングが返されます。
+録音データと話者が言うべきだった文を送信すると、音素ごと・単語ごと・全体のスコアに加え、認識された音素と単語タイミングが返されます。母語を問わず、英語学習者のために作られています。
 
 ![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
@@ -59,7 +59,7 @@ flowchart LR
         sem --> v2["v2 パイプライン<br/>ONNX 音素 CTC、GOP 特徴量、学習済みスコアラー"]
     end
     v1 --> w1[("Wav2Vec2 の重み<br/>イメージに同梱")]
-    v2 --> w2[("model.int8.onnx、vocab.json、scorer.json<br/>ビルド時にプライベート HF リポジトリから取得")]
+    v2 --> w2[("model.int8.onnx、vocab.json、scorer.json<br/>ビルド時に Hugging Face リポジトリから取得")]
 ```
 
 その他の図（v1 と v2 の比較、リクエストのシーケンス、起動）: [docs/architecture.md](docs/architecture.md)。
@@ -99,8 +99,7 @@ python main.py                                             # http://localhost:80
 v1 モデルは初回起動時に Hugging Face からダウンロードされます。**v2 には** `data/models/hubert-phone-ctc/` に **3 つのファイル**（`model.int8.onnx`、`vocab.json`、`scorer.json`）が必要です。これらがない場合、`/api/v2/evaluate` は `503` を返しますが、v1 には影響しません。
 
 ```bash
-# fetch the v2 files from the private repo (needs a Hugging Face read token)
-huggingface-cli login
+# fetch the v2 files from the public Hugging Face repo (no token needed)
 huggingface-cli download dris1153/pronunciation-v2 model.int8.onnx vocab.json scorer.json --local-dir data/models/hubert-phone-ctc
 ```
 
@@ -132,7 +131,7 @@ curl -X POST http://localhost:8000/api/v2/evaluate \
 ### Docker
 
 ```bash
-docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 --secret id=hf_token,env=HF_TOKEN -t pronunciation-validator .
+docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 -t pronunciation-validator .
 docker run -p 8000:8000 -e API_KEY=<32+ char key> -e DEBUG=false pronunciation-validator
 ```
 
@@ -166,7 +165,7 @@ speechocean762 のテスト分割（2500 発話、中国語を母語とする学
 
 音素モデル: LibriSpeech test-clean で音素誤り率 1.86%。INT8 化による各指標の変化は 0.004 以下です。
 
-> ⚠️ **正直な限界。** 評価に使った話者はすべて中国語を母語とする人で、**ベトナム語を母語とする話者での正確さは測定されていません**。発音スコア付きの公開ベトナム語母語データセットも見つかりませんでした（[データ計画](docs/evaluation.md#ベトナム語学習者向けデータ計画)）。スコア曲線は 5 つの合成クリップで調整しました。速度の数値は開発用マシンで得たものなので、お使いのホストで `debugs/benchmark.py` を再実行してください。詳細: [docs/evaluation.md](docs/evaluation.md)。
+> ⚠️ **正直な限界。** 評価に使った話者はすべて中国語を母語とする人なので、**他の母語での正確さは測定されていません**。このパイプラインは設計上、母語に依存しません（英語の音素を参照テキストと照らして採点し、母語ごとの専用ルールはありません）が、中国語を母語とする話者以外では検証されていません。これまでに行った唯一の調査（ベトナム語向け）でも、発音スコア付きで商用利用できる公開データセットは見つかりませんでした（[データ計画](docs/evaluation.md#他の母語向けのデータ計画)）。スコア曲線は 5 本の合成クリップで調整しました。速度の数値は開発用マシンのものなので、お使いのホストで `debugs/benchmark.py` を再実行してください。詳細: [docs/evaluation.md](docs/evaluation.md)。
 
 ## 🧰 技術スタック
 
@@ -215,7 +214,7 @@ pytest tests/ -v
 
 ## 🤝 コントリビュート
 
-ファイルは約 200 行以内に収め、既存の構成（`docs/structure.md`）に従い、プッシュする前にテストを実行してください。英語のドキュメントが [`languages/`](../README.md) にある翻訳の原本です。編集したあとは `python scripts/docs_sync.py bump` を実行してください（ルールは [AGENTS.md](../../AGENTS.md)）。スコアリングを変更する場合は、speechocean762 ハーネスでの変更前後の実行結果が必要です（[docs/evaluation.md](docs/evaluation.md)）。
+初めての方は、[CONTRIBUTING.md](../../CONTRIBUTING.md) を読み、[good first issue](https://github.com/dris1153/pronunciation-service/labels/good%20first%20issue) から始めてください。参加者は全員、[行動規範](../../CODE_OF_CONDUCT.md)に従うものとします。ファイルは約 200 行以内に収め、既存の構成（`docs/structure.md`）に従い、プッシュする前にテストを実行してください。英語のドキュメントが [`languages/`](../README.md) にある翻訳の原本です。編集したあとは `python scripts/docs_sync.py bump` を実行してください（ルールは [AGENTS.md](../../AGENTS.md)）。スコアリングを変更する場合は、speechocean762 ハーネスでの変更前後の実行結果が必要です（[docs/evaluation.md](docs/evaluation.md)）。
 
 ## 📄 ライセンスとクレジット
 

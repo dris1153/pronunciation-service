@@ -1,6 +1,6 @@
-<!-- doc-id: docs-readme | lang: ja | source-rev: 0557f5e0 -->
+<!-- doc-id: docs-readme | lang: ja | source-rev: c17acd89 -->
 
-> 🌐 [`docs/README.md`](../../../docs/README.md)（rev `0557f5e0`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
+> 🌐 [`docs/README.md`](../../../docs/README.md)（rev `c17acd89`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
 
 # ドキュメント
 
@@ -11,7 +11,7 @@
 | [scoring-v2.md](scoring-v2.md) | 音素ネイティブのパイプラインによる音声の採点方法、結果、限界 |
 | [scoring-v1.md](scoring-v1.md) | 従来の Wav2Vec2 パイプライン: 計算式と例 |
 | [scoring-constants.md](scoring-constants.md) | 各採点定数がその値である理由（v1 と v2） |
-| [evaluation.md](evaluation.md) | 専門家スコアとの品質比較、レイテンシ、メモリ、テスト、ベトナム語データ計画 |
+| [evaluation.md](evaluation.md) | 専門家スコアとの品質比較、レイテンシ、メモリ、テスト、他の母語向けのデータ計画 |
 | [training.md](training.md) | v2 モデルの学習とエクスポート、モデルファイルの公開 |
 | [configuration.md](configuration.md) | すべての環境変数 |
 | [deployment.md](deployment.md) | Docker、Railway、Coolify/nixpacks、Hugging Face のモデルファイル、サイジング |

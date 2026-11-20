@@ -1,6 +1,6 @@
-<!-- doc-id: docs-configuration | lang: es | source-rev: e26350fb -->
+<!-- doc-id: docs-configuration | lang: es | source-rev: 1c1e2cda -->
 
-> 🌐 **Traducción al español** de [`docs/configuration.md`](../../../docs/configuration.md) (rev `e26350fb`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
+> 🌐 **Traducción al español** de [`docs/configuration.md`](../../../docs/configuration.md) (rev `1c1e2cda`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
 
 # Configuración
 
@@ -81,6 +81,6 @@ Con `--cpus` de Docker o en Railway, la cuota de CPU es invisible para la sonda 
 
 | Nombre | Dónde | Descripción |
 | --- | --- | --- |
-| `V2_MODEL_REPO` | Argumento de build de Docker / variable de build de nixpacks | Repo privado de Hugging Face con los archivos v2, por ejemplo `dris1153/pronunciation-v2` |
-| `HF_TOKEN` | Secreto de build de Docker (`--secret id=hf_token,env=HF_TOKEN`) / variable de build de nixpacks | Token de lectura de ese repo. Nunca lo subas al repositorio ni lo incluyas en una capa de la imagen |
+| `V2_MODEL_REPO` | Argumento de build de Docker / variable de build de nixpacks | Repo público de Hugging Face con los archivos v2, por ejemplo `dris1153/pronunciation-v2` |
+| `HF_TOKEN` | Secreto de build de Docker (`--secret id=HF_TOKEN,env=HF_TOKEN`) / variable de build de nixpacks | Solo hace falta si ese repo es privado: un token de lectura. Nunca lo subas al repositorio ni lo incluyas en una capa de la imagen |
 | `ASR_MODEL_NAME` | Argumento de build de Docker | Sustituye el modelo v1 incluido en la imagen |

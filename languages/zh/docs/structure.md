@@ -1,6 +1,6 @@
-<!-- doc-id: docs-structure | lang: zh | source-rev: 6c7dadfe -->
+<!-- doc-id: docs-structure | lang: zh | source-rev: ba3880de -->
 
-> 🌐 **中文翻译**，源文件 [`docs/structure.md`](../../../docs/structure.md)（rev `6c7dadfe`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
+> 🌐 **中文翻译**，源文件 [`docs/structure.md`](../../../docs/structure.md)（rev `ba3880de`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
 
 # 项目结构
 
@@ -12,7 +12,7 @@ pronunciation-service/
 ├── main.py                     # Entry point — uvicorn bootstrap, reads PORT from Settings
 ├── requirements.txt            # Pinned Python dependencies (service venv, CPU)
 ├── pyproject.toml              # Black/Ruff/pytest config
-├── Dockerfile                  # Production image — bakes v1 model, downloads v2 files from a private HF repo
+├── Dockerfile                  # Production image — bakes v1 model, downloads v2 files from the HF repo
 ├── nixpacks.toml               # Coolify/nixpacks build (same model steps)
 ├── railway.toml                # Railway config — Dockerfile builder, health check, restart policy
 ├── download_model.py           # Build-time model download (v1 from HF, v2 from V2_MODEL_REPO)

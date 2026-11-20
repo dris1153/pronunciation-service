@@ -1,13 +1,13 @@
-<!-- doc-id: readme | lang: zh | source-rev: 078fdfd7 -->
+<!-- doc-id: readme | lang: zh | source-rev: 1429d642 -->
 
-> 🌐 **中文翻译**，源文件 [`README.md`](../../README.md)（rev `078fdfd7`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
+> 🌐 **中文翻译**，源文件 [`README.md`](../../README.md)（rev `1429d642`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
 
 <div align="center">
 
 # 🗣️ 发音校验服务
 
 **通过简单的 REST API 提供音素级英语发音评分。**
-上传一段录音以及说话人本应说出的句子，即可获得逐音素、逐单词和整体评分，以及识别出的音素和单词时间戳。
+上传一段录音以及说话人本应说出的句子，即可获得逐音素、逐单词和整体评分，以及识别出的音素和单词时间戳。面向所有英语学习者，无论其母语是什么。
 
 ![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
@@ -59,7 +59,7 @@ flowchart LR
         sem --> v2["v2 流水线<br/>ONNX 音素 CTC，GOP 特征，学习式评分器"]
     end
     v1 --> w1[("Wav2Vec2 权重<br/>内置于镜像")]
-    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>构建时从私有 HF 仓库获取")]
+    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>构建时从 Hugging Face 仓库获取")]
 ```
 
 更多图表（v1 与 v2 对比、请求时序、启动流程）：[docs/architecture.md](docs/architecture.md)。
@@ -99,8 +99,7 @@ python main.py                                             # http://localhost:80
 v1 模型在首次启动时从 Hugging Face 下载。**v2 需要三个文件**，放在 `data/models/hubert-phone-ctc/` 中（`model.int8.onnx`、`vocab.json`、`scorer.json`）；缺少这些文件时 `/api/v2/evaluate` 返回 `503`，v1 不受影响。
 
 ```bash
-# fetch the v2 files from the private repo (needs a Hugging Face read token)
-huggingface-cli login
+# fetch the v2 files from the public Hugging Face repo (no token needed)
 huggingface-cli download dris1153/pronunciation-v2 model.int8.onnx vocab.json scorer.json --local-dir data/models/hubert-phone-ctc
 ```
 
@@ -132,7 +131,7 @@ curl -X POST http://localhost:8000/api/v2/evaluate \
 ### Docker
 
 ```bash
-docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 --secret id=hf_token,env=HF_TOKEN -t pronunciation-validator .
+docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 -t pronunciation-validator .
 docker run -p 8000:8000 -e API_KEY=<32+ char key> -e DEBUG=false pronunciation-validator
 ```
 
@@ -166,7 +165,7 @@ speechocean762 测试集（2500 条话语，母语为普通话的学习者），
 
 音素模型：在 LibriSpeech test-clean 上的音素错误率为 1.86%。INT8 对每项指标的影响不超过 0.004。
 
-> ⚠️ **坦诚说明局限。** 所有评估说话人的母语均为普通话；**越南语母语者的准确度尚未测量**，也没有找到带发音评分的开放越南语母语者数据集（[数据计划](docs/evaluation.md#越南语学习者数据计划)）。评分曲线是在五条合成音频上调校的。速度数据来自开发机；请在你的主机上重新运行 `debugs/benchmark.py`。详情：[docs/evaluation.md](docs/evaluation.md)。
+> ⚠️ **坦诚说明局限。** 所有评估说话人的母语均为普通话，因此**其他母语的准确度尚未测量**。该流程在设计上与母语无关（它将英语音素与参考文本逐一比对，没有针对特定母语的规则），但这一点尚未在普通话母语者之外得到验证；目前仅有的一次调研（针对越南语）也没有找到带发音评分、可商用的开放数据集（[数据计划](docs/evaluation.md#更多母语的数据计划)）。分数曲线是基于五段合成音频调出来的。速度数据来自开发机，请在你的主机上重新运行 `debugs/benchmark.py`。详情见 [docs/evaluation.md](docs/evaluation.md)。
 
 ## 🧰 技术栈
 
@@ -215,7 +214,7 @@ pytest tests/ -v
 
 ## 🤝 贡献
 
-文件保持在约 200 行以内，遵循现有结构（`docs/structure.md`），并在推送前运行测试。英文文档是 [`languages/`](../README.md) 中各译文的权威来源：编辑后请运行 `python scripts/docs_sync.py bump`（规则见 [AGENTS.md](../../AGENTS.md)）。评分方面的改动需要在 speechocean762 评测脚本上做前后对比运行（[docs/evaluation.md](docs/evaluation.md)）。
+初来乍到？请先阅读 [CONTRIBUTING.md](../../CONTRIBUTING.md)，并从一个 [good first issue](https://github.com/dris1153/pronunciation-service/labels/good%20first%20issue) 开始；每位参与者都需遵守[行为准则](../../CODE_OF_CONDUCT.md)。文件保持在约 200 行以内，遵循现有结构（`docs/structure.md`），并在推送前运行测试。英文文档是 [`languages/`](../README.md) 中各译文的权威来源：编辑后请运行 `python scripts/docs_sync.py bump`（规则见 [AGENTS.md](../../AGENTS.md)）。评分方面的改动需要在 speechocean762 评测脚本上做前后对比运行（[docs/evaluation.md](docs/evaluation.md)）。
 
 ## 📄 许可证与致谢
 

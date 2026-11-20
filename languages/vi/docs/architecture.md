@@ -1,6 +1,6 @@
-<!-- doc-id: docs-architecture | lang: vi | source-rev: f54d8e3a -->
+<!-- doc-id: docs-architecture | lang: vi | source-rev: ec588fa9 -->
 
-> 🌐 **Bản dịch tiếng Việt** của [`docs/architecture.md`](../../../docs/architecture.md) (rev `f54d8e3a`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
+> 🌐 **Bản dịch tiếng Việt** của [`docs/architecture.md`](../../../docs/architecture.md) (rev `ec588fa9`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
 
 # Kiến trúc
 
@@ -17,7 +17,7 @@ flowchart LR
         mw --> misc["text-analysis, transcribe,<br/>model-info, health"]
     end
     v1 --> w1[("Trọng số Wav2Vec2<br/>đóng sẵn trong image")]
-    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>từ repo HF riêng tư lúc build")]
+    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>từ repo HF lúc build")]
 ```
 
 Mọi thứ chạy trong một tiến trình vì các model lớn và chỉ được tải một lần; thêm worker uvicorn sẽ khiến mỗi worker tải một bản sao riêng. Suy luận trên CPU bị giới hạn bởi một semaphore (`MAX_CONCURRENT_INFERENCES`), và phần việc chặn chạy trong một worker thread để event loop luôn rảnh.

@@ -1,6 +1,6 @@
-<!-- doc-id: docs-evaluation | lang: es | source-rev: e6f94b86 -->
+<!-- doc-id: docs-evaluation | lang: es | source-rev: 918ee14a -->
 
-> 🌐 **Traducción al español** de [`docs/evaluation.md`](../../../docs/evaluation.md) (rev `e6f94b86`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
+> 🌐 **Traducción al español** de [`docs/evaluation.md`](../../../docs/evaluation.md) (rev `918ee14a`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
 
 # Evaluación, benchmarks y pruebas
 
@@ -28,13 +28,13 @@ Notas: las cifras de v2 usan el modelo FP32; INT8 queda a 0.004 o menos en todas
 
 ### Lo que estas cifras no te dicen
 
-- **Todos los hablantes tienen L1 mandarín.** Los estudiantes vietnamitas cometen errores distintos (consonantes finales, th/dh, s/sh, grupos consonánticos). Todavía no existen cifras con L1 vietnamita.
+- **Todos los hablantes tienen L1 mandarín.** Los estudiantes con otras lenguas maternas cometen errores distintos (consonantes finales, th/dh, grupos consonánticos, duración de las vocales). Todavía no hay cifras para ninguna otra L1.
 - Los clips de sanidad que sustentan el exponente de la curva de puntuación son cinco grabaciones sintéticas (gTTS).
 - El evaluador no se validó con audio de entre 20 y 30 s.
 
-### Plan de datos para estudiantes vietnamitas
+### Plan de datos para más lenguas maternas
 
-Una revisión no encontró **ningún corpus abierto y de uso comercial de inglés con L1 vietnamita y puntuaciones de pronunciación**. L2-ARCTIC tiene cuatro hablantes vietnamitas, pero con etiquetas binarias de fonema y una licencia no comercial; speechocean762 es solo de mandarín; los corpus de habla nativa vietnamita no contienen inglés. La vía realista es grabar y anotar a estudiantes con el protocolo de speechocean762 (3+ evaluadores, fonema 0-2 / palabra / enunciado), empezando con unos 50-100 hablantes adultos y 500-1000 enunciados para recalibrar el evaluador.
+Una encuesta hecha para el vietnamita no encontró **ningún corpus de inglés abierto y de uso comercial con puntuaciones de pronunciación para esa L1**; las demás lenguas maternas no se han investigado. L2-ARCTIC tiene 24 hablantes de seis lenguas maternas (cuatro de cada una), pero etiquetas de fonema binarias y una licencia no comercial; speechocean762 es solo mandarín. La vía realista es grabar y anotar a estudiantes con el protocolo de speechocean762 (3 o más evaluadores, fonema 0-2 / palabra / enunciado), una lengua materna cada vez, empezando con unos 50-100 hablantes adultos y 500-1000 enunciados para validar o recalibrar el evaluador de esa L1.
 
 ## Latencia y memoria
 

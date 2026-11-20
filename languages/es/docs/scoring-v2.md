@@ -1,6 +1,6 @@
-<!-- doc-id: docs-scoring-v2 | lang: es | source-rev: 4b5806b4 -->
+<!-- doc-id: docs-scoring-v2 | lang: es | source-rev: 809ff2ba -->
 
-> 🌐 **Traducción al español** de [`docs/scoring-v2.md`](../../../docs/scoring-v2.md) (rev `4b5806b4`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
+> 🌐 **Traducción al español** de [`docs/scoring-v2.md`](../../../docs/scoring-v2.md) (rev `809ff2ba`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
 
 # Puntuación v2 (pipeline nativo de fonemas)
 
@@ -85,7 +85,7 @@ Mal pronunciado = puntuación de fonema de los expertos inferior a 1.0 (4% de lo
 
 ## Límites
 
-- **Discrepancia de L1:** todos los hablantes del corpus de entrenamiento y evaluación tienen el mandarín como L1. El comportamiento con estudiantes vietnamitas no se ha medido; consulta [evaluation.md](evaluation.md) para el plan de datos.
+- **Discrepancia de L1:** todos los hablantes del corpus de entrenamiento y evaluación tienen L1 mandarín. El comportamiento con otras lenguas maternas no se ha medido; consulta [evaluation.md](evaluation.md) para el plan de datos.
 - Las puntuaciones para audio de entre 20 y 30 s no se han probado en el lado del evaluador (los clips de speechocean762 son cortos); el modelo de fonemas en sí funciona bien ahí.
 - Una referencia de más de ~300 fonemas (100 palabras) es el techo práctico; la alineación es cuadrática en el número de fonemas.
 - Los fonemas geminados en el límite entre palabras (`that time`) se colapsan en CTC, de modo que una /t/ puede notificarse como ausente.

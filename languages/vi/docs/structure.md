@@ -1,6 +1,6 @@
-<!-- doc-id: docs-structure | lang: vi | source-rev: 6c7dadfe -->
+<!-- doc-id: docs-structure | lang: vi | source-rev: ba3880de -->
 
-> 🌐 **Bản dịch tiếng Việt** của [`docs/structure.md`](../../../docs/structure.md) (rev `6c7dadfe`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
+> 🌐 **Bản dịch tiếng Việt** của [`docs/structure.md`](../../../docs/structure.md) (rev `ba3880de`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
 
 # Cấu trúc dự án
 
@@ -12,7 +12,7 @@ pronunciation-service/
 ├── main.py                     # Entry point — uvicorn bootstrap, reads PORT from Settings
 ├── requirements.txt            # Pinned Python dependencies (service venv, CPU)
 ├── pyproject.toml              # Black/Ruff/pytest config
-├── Dockerfile                  # Production image — bakes v1 model, downloads v2 files from a private HF repo
+├── Dockerfile                  # Production image — bakes v1 model, downloads v2 files from the HF repo
 ├── nixpacks.toml               # Coolify/nixpacks build (same model steps)
 ├── railway.toml                # Railway config — Dockerfile builder, health check, restart policy
 ├── download_model.py           # Build-time model download (v1 from HF, v2 from V2_MODEL_REPO)

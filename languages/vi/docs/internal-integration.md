@@ -1,6 +1,6 @@
-<!-- doc-id: docs-internal-integration | lang: vi | source-rev: 59ec0cbb -->
+<!-- doc-id: docs-internal-integration | lang: vi | source-rev: bf352fba -->
 
-> 🌐 **Bản dịch tiếng Việt** của [`docs/internal-integration.md`](../../../docs/internal-integration.md) (rev `59ec0cbb`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
+> 🌐 **Bản dịch tiếng Việt** của [`docs/internal-integration.md`](../../../docs/internal-integration.md) (rev `bf352fba`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
 
 # Hướng dẫn tích hợp Microservice nội bộ
 
@@ -287,5 +287,5 @@ Request, xác thực, giới hạn tốc độ và mã lỗi giống hệt v1; c
 - `transcribed_text` là chuỗi IPA nghe được (ví dụ `jɛloʊ wɝd`), không phải các từ được nhận dạng. Đừng hiển thị nó như một câu.
 - `is_correct_ipa` là kết luận do bộ chấm học được (F1 chỉ-gắn-cờ 0.54 so với 0.31 của cách heard != expected; trên speechocean762, 18% số phone được nghe khác đi nhưng vẫn được chấp nhận, 0.3% được nghe đúng nhưng vẫn bị gắn cờ). Không bao giờ suy ra "sai" bằng cách so sánh `actual_ipa` với `expected_ipa` trong UI; một phone có thể được nghe thành một ký hiệu khác (`actual_ipa`) mà vẫn được chấp nhận (các biến thể không ảnh hưởng giọng), hoặc được nghe đúng mà vẫn bị gắn cờ.
 - Có thêm `start_ms` / `end_ms` cho từng từ để làm nổi bật trong trình phát.
-- Điểm số dùng một hiệu chỉnh khác v1: đừng so sánh số của v1 và v2 hoặc dùng lại ngưỡng. Được hiệu chỉnh theo speechocean762 (L1 tiếng Quan Thoại); độ chính xác với L1 tiếng Việt chưa được đo.
+- Điểm số dùng một hiệu chỉnh khác v1: đừng so sánh số của v1 và v2 hoặc dùng lại ngưỡng. Được hiệu chỉnh theo speechocean762 (L1 tiếng Quan Thoại); độ chính xác với các ngôn ngữ mẹ đẻ khác chưa được đo.
 - 503 kèm `v2 model is not available on this server.` nghĩa là image được build mà không có các tệp v2.

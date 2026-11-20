@@ -1,13 +1,13 @@
-<!-- doc-id: readme | lang: vi | source-rev: 078fdfd7 -->
+<!-- doc-id: readme | lang: vi | source-rev: 1429d642 -->
 
-> 🌐 **Bản dịch tiếng Việt** của [`README.md`](../../README.md) (rev `078fdfd7`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
+> 🌐 **Bản dịch tiếng Việt** của [`README.md`](../../README.md) (rev `1429d642`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
 
 <div align="center">
 
 # 🗣️ Pronunciation Validation Service
 
 **Chấm điểm phát âm tiếng Anh đến mức phoneme qua một REST API đơn giản.**
-Tải lên một bản ghi âm và câu mà người nói lẽ ra phải đọc; nhận về điểm theo từng phone, từng từ và điểm tổng, kèm các phone nghe được và thời gian từng từ.
+Tải lên một bản ghi âm và câu mà người nói lẽ ra phải đọc; nhận về điểm theo từng phone, từng từ và điểm tổng, kèm các phone nghe được và thời gian từng từ. Dành cho người học tiếng Anh, bất kể tiếng mẹ đẻ của họ là gì.
 
 ![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
@@ -59,7 +59,7 @@ flowchart LR
         sem --> v2["Pipeline v2<br/>ONNX phone CTC, đặc trưng GOP, bộ chấm học từ dữ liệu"]
     end
     v1 --> w1[("Trọng số Wav2Vec2<br/>trong image")]
-    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>từ repo HF riêng tư lúc build")]
+    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>từ repo Hugging Face lúc build")]
 ```
 
 Thêm sơ đồ (v1 so với v2, trình tự xử lý request, khởi động): [docs/architecture.md](docs/architecture.md).
@@ -99,8 +99,7 @@ python main.py                                             # http://localhost:80
 Model v1 được tải từ Hugging Face ở lần khởi động đầu tiên. **v2 cần ba tệp** trong `data/models/hubert-phone-ctc/` (`model.int8.onnx`, `vocab.json`, `scorer.json`); nếu thiếu, `/api/v2/evaluate` trả về `503` và v1 không bị ảnh hưởng.
 
 ```bash
-# fetch the v2 files from the private repo (needs a Hugging Face read token)
-huggingface-cli login
+# fetch the v2 files from the public Hugging Face repo (no token needed)
 huggingface-cli download dris1153/pronunciation-v2 model.int8.onnx vocab.json scorer.json --local-dir data/models/hubert-phone-ctc
 ```
 
@@ -132,7 +131,7 @@ curl -X POST http://localhost:8000/api/v2/evaluate \
 ### Docker
 
 ```bash
-docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 --secret id=hf_token,env=HF_TOKEN -t pronunciation-validator .
+docker build --build-arg V2_MODEL_REPO=dris1153/pronunciation-v2 -t pronunciation-validator .
 docker run -p 8000:8000 -e API_KEY=<32+ char key> -e DEBUG=false pronunciation-validator
 ```
 
@@ -166,7 +165,7 @@ Tập test của speechocean762 (2500 câu nói, người học có L1 là tiế
 
 Model phone: tỷ lệ lỗi phone 1.86% trên LibriSpeech test-clean. INT8 làm thay đổi mỗi chỉ số không quá 0.004.
 
-> ⚠️ **Giới hạn cần nói thẳng.** Tất cả người nói trong tập đánh giá đều có L1 là tiếng Quan Thoại; **độ chính xác với người học có L1 là tiếng Việt chưa được đo** và không tìm thấy bộ dữ liệu mở nào về người học có L1 tiếng Việt kèm điểm phát âm ([kế hoạch dữ liệu](docs/evaluation.md#kế-hoạch-dữ-liệu-cho-người-học-tiếng-việt)). Đường cong điểm được chỉnh trên năm clip tổng hợp. Số liệu tốc độ đo trên máy dev; hãy chạy lại `debugs/benchmark.py` trên máy chủ của bạn. Chi tiết: [docs/evaluation.md](docs/evaluation.md).
+> ⚠️ **Giới hạn cần nói thẳng.** Mọi người nói trong tập đánh giá đều có L1 là tiếng Quan Thoại, nên **độ chính xác với các ngôn ngữ mẹ đẻ khác chưa được đo**. Pipeline được thiết kế không phụ thuộc L1 (nó chấm các phone tiếng Anh so với văn bản tham chiếu và không có quy tắc riêng cho từng L1), nhưng điều đó chưa được kiểm chứng ngoài L1 tiếng Quan Thoại, và đợt khảo sát duy nhất đến nay (cho tiếng Việt) không tìm thấy bộ dữ liệu mở, dùng được thương mại, có điểm phát âm ([kế hoạch dữ liệu](docs/evaluation.md#kế-hoạch-dữ-liệu-cho-thêm-các-ngôn-ngữ-mẹ-đẻ)). Đường cong điểm được chỉnh trên năm clip tổng hợp. Số liệu tốc độ đo trên máy dev; hãy chạy lại `debugs/benchmark.py` trên máy của bạn. Chi tiết: [docs/evaluation.md](docs/evaluation.md).
 
 ## 🧰 Công nghệ sử dụng
 
@@ -215,7 +214,7 @@ Các test cần tệp model v2 thật sẽ tự bỏ qua khi thiếu tệp. Hai 
 
 ## 🤝 Đóng góp
 
-Giữ mỗi tệp dưới khoảng 200 dòng, theo cấu trúc hiện có (`docs/structure.md`) và chạy test trước khi push. Tài liệu tiếng Anh là nguồn chuẩn cho các bản dịch trong [`languages/`](../README.md): sau khi sửa một tệp, chạy `python scripts/docs_sync.py bump` (quy tắc trong [AGENTS.md](../../AGENTS.md)). Các thay đổi về chấm điểm cần chạy bộ đánh giá speechocean762 trước và sau thay đổi ([docs/evaluation.md](docs/evaluation.md)).
+Mới tham gia? Hãy bắt đầu với [CONTRIBUTING.md](../../CONTRIBUTING.md) và một [good first issue](https://github.com/dris1153/pronunciation-service/labels/good%20first%20issue); mọi người đều cần tuân theo [Quy tắc ứng xử](../../CODE_OF_CONDUCT.md). Giữ mỗi tệp dưới khoảng 200 dòng, theo cấu trúc hiện có (`docs/structure.md`) và chạy test trước khi push. Tài liệu tiếng Anh là nguồn chuẩn cho các bản dịch trong [`languages/`](../README.md): sau khi sửa một tệp, chạy `python scripts/docs_sync.py bump` (quy tắc trong [AGENTS.md](../../AGENTS.md)). Các thay đổi về chấm điểm cần chạy bộ đánh giá speechocean762 trước và sau thay đổi ([docs/evaluation.md](docs/evaluation.md)).
 
 ## 📄 Giấy phép và ghi công
 

@@ -1,6 +1,6 @@
-<!-- doc-id: docs-structure | lang: ja | source-rev: 6c7dadfe -->
+<!-- doc-id: docs-structure | lang: ja | source-rev: ba3880de -->
 
-> 🌐 [`docs/structure.md`](../../../docs/structure.md)（rev `6c7dadfe`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
+> 🌐 [`docs/structure.md`](../../../docs/structure.md)（rev `ba3880de`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
 
 # プロジェクト構成
 
@@ -12,7 +12,7 @@ pronunciation-service/
 ├── main.py                     # Entry point — uvicorn bootstrap, reads PORT from Settings
 ├── requirements.txt            # Pinned Python dependencies (service venv, CPU)
 ├── pyproject.toml              # Black/Ruff/pytest config
-├── Dockerfile                  # Production image — bakes v1 model, downloads v2 files from a private HF repo
+├── Dockerfile                  # Production image — bakes v1 model, downloads v2 files from the HF repo
 ├── nixpacks.toml               # Coolify/nixpacks build (same model steps)
 ├── railway.toml                # Railway config — Dockerfile builder, health check, restart policy
 ├── download_model.py           # Build-time model download (v1 from HF, v2 from V2_MODEL_REPO)

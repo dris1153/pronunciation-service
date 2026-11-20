@@ -1,6 +1,6 @@
-<!-- doc-id: docs-training | lang: zh | source-rev: 948a85b2 -->
+<!-- doc-id: docs-training | lang: zh | source-rev: 9feeca07 -->
 
-> 🌐 **中文翻译**，源文件 [`docs/training.md`](../../../docs/training.md)（rev `948a85b2`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
+> 🌐 **中文翻译**，源文件 [`docs/training.md`](../../../docs/training.md)（rev `9feeca07`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
 
 # 训练 v2 模型
 
@@ -15,7 +15,7 @@ flowchart LR
     ex --> feat
     feat --> sc["train_scorer.py<br/>音素 MLP + 岭回归头"]
     sc --> js["scorer.json"]
-    ex --> up["upload_v2_model.py<br/>私有 HF 仓库"]
+    ex --> up["upload_v2_model.py<br/>HF 仓库"]
     js --> up
 ```
 
@@ -64,8 +64,8 @@ python scripts/speechocean762_eval.py --api v2 --split test  --out data/so762-v2
 
 ## 3. 发布
 
-`scripts/upload_v2_model.py` 将 `model.int8.onnx`、`vocab.json` 和 `scorer.json` 上传到镜像构建时下载所用的私有 Hugging Face 仓库（[deployment.md](deployment.md)）。每当音素模型或特征布局发生变化，就要重新训练评分器：`scorer.json` 与生成它的代码的确切特征顺序绑定（目前还没有版本标记）。
+`scripts/upload_v2_model.py` 会把 `model.int8.onnx`、`vocab.json` 和 `scorer.json` 上传到镜像构建所下载的 Hugging Face 仓库（[deployment.md](deployment.md)）。每当音素模型或特征布局发生变化，都要重新训练评分器：`scorer.json` 与生成它的代码中的特征顺序严格绑定（目前还没有版本标记）。
 
 ## 许可证与数据
 
-LibriSpeech 和 speechocean762 为 CC BY 4.0（署名见 [NOTICE](../../../NOTICE)）；训练出的模型是 HuBERT-base（Apache-2.0）的衍生作品。**不**使用 L2-ARCTIC：它是 CC BY-NC。speechocean762 的母语为普通话，因此收集并标注越南语母语者数据是主要的待办事项（[evaluation.md](evaluation.md)）。
+LibriSpeech 和 speechocean762 采用 CC BY 4.0（署名见 [NOTICE](../../../NOTICE)）；训练出的模型是 HuBERT-base（Apache-2.0）的衍生作品。未使用 L2-ARCTIC：它是 CC BY-NC。speechocean762 的母语是普通话，因此收集并标注其他母语学习者的数据是目前最主要的待办事项（[evaluation.md](evaluation.md)）。

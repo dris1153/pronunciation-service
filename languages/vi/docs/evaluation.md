@@ -1,6 +1,6 @@
-<!-- doc-id: docs-evaluation | lang: vi | source-rev: e6f94b86 -->
+<!-- doc-id: docs-evaluation | lang: vi | source-rev: 918ee14a -->
 
-> 🌐 **Bản dịch tiếng Việt** của [`docs/evaluation.md`](../../../docs/evaluation.md) (rev `e6f94b86`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
+> 🌐 **Bản dịch tiếng Việt** của [`docs/evaluation.md`](../../../docs/evaluation.md) (rev `918ee14a`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
 
 # Đánh giá, benchmark và test
 
@@ -28,13 +28,13 @@ Ghi chú: số liệu v2 dùng model FP32; INT8 lệch không quá 0.004 trên m
 
 ### Những điều số liệu này không cho bạn biết
 
-- **Mọi người nói đều có L1 là tiếng Quan Thoại.** Người học Việt Nam mắc các lỗi khác (phụ âm cuối, th/dh, s/sh, cụm phụ âm). Chưa có số liệu nào cho L1 tiếng Việt.
+- **Mọi người nói đều có L1 là tiếng Quan Thoại.** Người học có tiếng mẹ đẻ khác mắc các lỗi khác (phụ âm cuối, th/dh, cụm phụ âm, độ dài nguyên âm). Chưa có số liệu nào cho bất kỳ L1 nào khác.
 - Các clip sanity đứng sau số mũ của đường cong điểm là năm bản ghi tổng hợp (gTTS).
 - Bộ chấm chưa được kiểm chứng trên audio dài từ 20 đến 30 s.
 
-### Kế hoạch dữ liệu cho người học tiếng Việt
+### Kế hoạch dữ liệu cho thêm các ngôn ngữ mẹ đẻ
 
-Một đợt khảo sát cho thấy **không có kho dữ liệu tiếng Anh nào có L1 tiếng Việt, mở và dùng được cho mục đích thương mại, kèm điểm phát âm**. L2-ARCTIC có bốn người nói tiếng Việt nhưng nhãn phone chỉ ở dạng nhị phân và giấy phép phi thương mại; speechocean762 chỉ có tiếng Quan Thoại; các kho giọng bản xứ tiếng Việt không chứa tiếng Anh. Hướng thực tế là ghi âm và gán nhãn người học theo giao thức của speechocean762 (3+ người chấm, phone 0-2 / từ / câu nói), bắt đầu với khoảng 50-100 người nói là người lớn và 500-1000 câu nói để hiệu chỉnh lại bộ chấm.
+Một đợt khảo sát thực hiện cho tiếng Việt cho thấy **không có kho dữ liệu tiếng Anh nào mở, dùng được cho mục đích thương mại, kèm điểm phát âm cho L1 đó**; các ngôn ngữ mẹ đẻ khác chưa được khảo sát. L2-ARCTIC có 24 người nói thuộc sáu ngôn ngữ mẹ đẻ (mỗi ngôn ngữ bốn người) nhưng nhãn phone chỉ ở dạng nhị phân và giấy phép phi thương mại; speechocean762 chỉ có tiếng Quan Thoại. Hướng thực tế là ghi âm và gán nhãn người học theo giao thức của speechocean762 (từ 3 người chấm trở lên, phone 0-2 / từ / câu nói), lần lượt từng ngôn ngữ mẹ đẻ, bắt đầu với khoảng 50-100 người nói trưởng thành và 500-1000 câu để kiểm chứng hoặc hiệu chỉnh lại bộ chấm cho L1 đó.
 
 ## Độ trễ và bộ nhớ
 

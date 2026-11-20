@@ -1,6 +1,6 @@
-<!-- doc-id: docs-training | lang: ja | source-rev: 948a85b2 -->
+<!-- doc-id: docs-training | lang: ja | source-rev: 9feeca07 -->
 
-> 🌐 [`docs/training.md`](../../../docs/training.md)（rev `948a85b2`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
+> 🌐 [`docs/training.md`](../../../docs/training.md)（rev `9feeca07`）の**日本語訳**です。英語版が正です。内容が異なる場合は英語版に従ってください。機械翻訳であり、ネイティブによる校閲は受けていません。
 
 # v2 モデルの学習
 
@@ -15,7 +15,7 @@ flowchart LR
     ex --> feat
     feat --> sc["train_scorer.py<br/>音素 MLP + リッジヘッド"]
     sc --> js["scorer.json"]
-    ex --> up["upload_v2_model.py<br/>プライベート HF リポジトリ"]
+    ex --> up["upload_v2_model.py<br/>HF リポジトリ"]
     js --> up
 ```
 
@@ -64,8 +64,8 @@ python scripts/speechocean762_eval.py --api v2 --split test  --out data/so762-v2
 
 ## 3. 公開
 
-`scripts/upload_v2_model.py` は、`model.int8.onnx`、`vocab.json`、`scorer.json` を、イメージのビルドがダウンロード元とするプライベートな Hugging Face リポジトリにアップロードします（[deployment.md](deployment.md)）。音素モデルまたは特徴量のレイアウトを変更したときは、必ずスコアラーを再学習してください。`scorer.json` は、それを生成したコードの特徴量の正確な順序に結び付いています（バージョンスタンプはまだありません）。
+`scripts/upload_v2_model.py` は、`model.int8.onnx`、`vocab.json`、`scorer.json` を、イメージのビルドがダウンロードする Hugging Face リポジトリへアップロードします（[deployment.md](deployment.md)）。音素モデルや特徴量のレイアウトが変わるたびに、スコアラーを再学習してください。`scorer.json` は、それを生成したコードの特徴量の順序に厳密に結びついています（バージョン識別はまだありません）。
 
 ## ライセンスとデータ
 
-LibriSpeech と speechocean762 は CC BY 4.0 です（クレジットは [NOTICE](../../../NOTICE) にあります）。学習したモデルは HuBERT-base（Apache-2.0）の派生物です。L2-ARCTIC は CC BY-NC のため、使用して**いません**。speechocean762 は中国語が母語の話者のみなので、ベトナム語を母語とする話者の収集とアノテーションが、主な未解決の課題です（[evaluation.md](evaluation.md)）。
+LibriSpeech と speechocean762 は CC BY 4.0 です（クレジットは [NOTICE](../../../NOTICE) を参照）。学習済みモデルは HuBERT-base（Apache-2.0）の派生物です。L2-ARCTIC は使用していません。これは CC BY-NC だからです。speechocean762 は中国語を母語とする話者のデータなので、他の母語の学習者を収集・アノテーションすることが主な未解決課題です（[evaluation.md](evaluation.md)）。

@@ -1,6 +1,6 @@
-<!-- doc-id: docs-internal-integration | lang: zh | source-rev: 59ec0cbb -->
+<!-- doc-id: docs-internal-integration | lang: zh | source-rev: bf352fba -->
 
-> 🌐 **中文翻译**，源文件 [`docs/internal-integration.md`](../../../docs/internal-integration.md)（rev `59ec0cbb`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
+> 🌐 **中文翻译**，源文件 [`docs/internal-integration.md`](../../../docs/internal-integration.md)（rev `bf352fba`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
 
 # 内部微服务集成指南
 
@@ -287,5 +287,5 @@ TRUSTED_PROXY_CIDRS_STR=172.18.0.0/16
 - `transcribed_text` 是识别出的 IPA 字符串（例如 `jɛloʊ wɝd`），而不是识别出的单词。不要把它当作句子来渲染。
 - `is_correct_ipa` 是学习得到的判定（仅标记时 F1 为 0.54，而“识别出的 != 预期的”为 0.31；在 speechocean762 上，18% 的音素识别结果不同但仍被接受，0.3% 识别正确却被标记）。切勿在 UI 中通过比较 `actual_ipa` 与 `expected_ipa` 来推断“错误”；一个音素可能被识别为不同的符号（`actual_ipa`）却仍被接受（与口音无关的变体），也可能识别正确却被标记。
 - 新增的逐单词 `start_ms` / `end_ms`，可用于在播放器中高亮。
-- 评分的校准方式与 v1 不同：不要比较 v1 和 v2 的数值，也不要复用阈值。以 speechocean762（母语为普通话）为基准校准；越南语母语者的准确度尚未测量。
+- 分数的校准方式与 v1 不同：不要比较 v1 和 v2 的数值，也不要沿用阈值。校准依据是 speechocean762（母语为普通话）；其他母语的准确度尚未测量。
 - 返回 503 且消息为 `v2 model is not available on this server.`，表示镜像构建时没有包含 v2 文件。

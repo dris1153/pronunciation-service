@@ -1,6 +1,6 @@
-<!-- doc-id: docs-scoring-v2 | lang: zh | source-rev: 4b5806b4 -->
+<!-- doc-id: docs-scoring-v2 | lang: zh | source-rev: 809ff2ba -->
 
-> 🌐 **中文翻译**，源文件 [`docs/scoring-v2.md`](../../../docs/scoring-v2.md)（rev `4b5806b4`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
+> 🌐 **中文翻译**，源文件 [`docs/scoring-v2.md`](../../../docs/scoring-v2.md)（rev `809ff2ba`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
 
 # 评分 v2（音素原生流水线）
 
@@ -85,7 +85,7 @@ flowchart TD
 
 ## 局限
 
-- **L1 不匹配：** 训练和评估语料库中的每位说话人母语都是普通话。在越南语学习者上的表现未测量；数据计划见 [evaluation.md](evaluation.md)。
+- **L1 不匹配：** 训练和评估语料中的所有说话人，母语都是普通话。其他母语的表现尚未测量；数据计划见 [evaluation.md](evaluation.md)。
 - 评分器一侧对 20 到 30 秒音频的评分未经测试（speechocean762 的音频都很短）；音素模型本身在这一范围内没有问题。
 - 超过约 300 个音素（100 个单词）的参考文本是实际的上限；对齐的复杂度与音素数量呈平方关系。
 - 跨单词边界的重复音素（`that time`）在 CTC 中会合并，因此一个 /t/ 可能被报告为缺失。

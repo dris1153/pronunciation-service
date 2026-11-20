@@ -1,6 +1,6 @@
-<!-- doc-id: docs-scoring-v2 | lang: vi | source-rev: 4b5806b4 -->
+<!-- doc-id: docs-scoring-v2 | lang: vi | source-rev: 809ff2ba -->
 
-> 🌐 **Bản dịch tiếng Việt** của [`docs/scoring-v2.md`](../../../docs/scoring-v2.md) (rev `4b5806b4`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
+> 🌐 **Bản dịch tiếng Việt** của [`docs/scoring-v2.md`](../../../docs/scoring-v2.md) (rev `809ff2ba`). Bản tiếng Anh là chuẩn: nếu hai bản khác nhau, hãy theo bản tiếng Anh. Bản dịch do máy thực hiện, chưa có người bản xứ rà soát.
 
 # Chấm điểm v2 (pipeline thuần phoneme)
 
@@ -85,7 +85,7 @@ Phát âm sai = điểm phone của chuyên gia dưới 1.0 (4% số phone). Cá
 
 ## Giới hạn
 
-- **L1 không khớp:** mọi người nói trong kho dữ liệu huấn luyện và đánh giá đều có L1 là tiếng Quan Thoại. Hành vi với người học Việt Nam chưa được đo; xem [evaluation.md](evaluation.md) để biết kế hoạch dữ liệu.
+- **L1 không khớp:** mọi người nói trong kho dữ liệu huấn luyện và đánh giá đều có L1 là tiếng Quan Thoại. Hành vi với các ngôn ngữ mẹ đẻ khác chưa được đo; xem [evaluation.md](evaluation.md) để biết kế hoạch dữ liệu.
 - Điểm cho audio dài từ 20 đến 30 s chưa được kiểm thử ở phía bộ chấm (các clip của speechocean762 ngắn); bản thân model phone thì ổn ở khoảng đó.
 - Văn bản tham chiếu có hơn ~300 phone (100 từ) là mức trần thực tế; căn chỉnh có độ phức tạp bậc hai theo số phone.
 - Các phone đôi (geminate) qua ranh giới từ (`that time`) bị gộp trong CTC, nên một /t/ có thể bị báo là thiếu.

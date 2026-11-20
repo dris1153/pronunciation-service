@@ -1,6 +1,6 @@
-<!-- doc-id: docs-architecture | lang: es | source-rev: f54d8e3a -->
+<!-- doc-id: docs-architecture | lang: es | source-rev: ec588fa9 -->
 
-> 🌐 **Traducción al español** de [`docs/architecture.md`](../../../docs/architecture.md) (rev `f54d8e3a`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
+> 🌐 **Traducción al español** de [`docs/architecture.md`](../../../docs/architecture.md) (rev `ec588fa9`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
 
 # Arquitectura
 
@@ -17,7 +17,7 @@ flowchart LR
         mw --> misc["text-analysis, transcribe,<br/>model-info, health"]
     end
     v1 --> w1[("Pesos de Wav2Vec2<br/>incluidos en la imagen")]
-    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>desde el repo HF privado en el build")]
+    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>desde el repo HF en el build")]
 ```
 
 Todo se ejecuta en un solo proceso porque los modelos son grandes y se cargan una única vez; cada worker adicional de uvicorn cargaría su propia copia. La inferencia en CPU está limitada por un semáforo (`MAX_CONCURRENT_INFERENCES`), y el trabajo bloqueante se ejecuta en un hilo de trabajo para que el bucle de eventos quede libre.

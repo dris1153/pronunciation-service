@@ -1,6 +1,6 @@
-<!-- doc-id: docs-internal-integration | lang: es | source-rev: 59ec0cbb -->
+<!-- doc-id: docs-internal-integration | lang: es | source-rev: bf352fba -->
 
-> 🌐 **Traducción al español** de [`docs/internal-integration.md`](../../../docs/internal-integration.md) (rev `59ec0cbb`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
+> 🌐 **Traducción al español** de [`docs/internal-integration.md`](../../../docs/internal-integration.md) (rev `bf352fba`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
 
 # Guía de integración de microservicios internos
 
@@ -287,5 +287,5 @@ La petición, la autenticación, el límite de peticiones y los códigos de erro
 - `transcribed_text` es la cadena IPA oída (p. ej. `jɛloʊ wɝd`), no las palabras reconocidas. No la muestres como una oración.
 - `is_correct_ipa` es un veredicto aprendido (F1 solo del marcado 0.54 frente a 0.31 con oído != esperado; en speechocean762, el 18% de los fonemas se oyen distintos pero se aceptan, el 0.3% se oyen correctos pero se marcan). Nunca deduzcas "incorrecto" comparando `actual_ipa` con `expected_ipa` en la UI; un fonema puede oírse como otro símbolo (`actual_ipa`) y aun así aceptarse (variantes neutras en cuanto al acento), o oírse correctamente y marcarse.
 - Nuevos `start_ms` / `end_ms` por palabra para resaltar en un reproductor.
-- Las puntuaciones tienen una calibración distinta a la de v1: no compares los números de v1 y v2 ni reutilices umbrales. Calibrado con speechocean762 (L1 mandarín); la precisión con L1 vietnamita aún no se ha medido.
+- Las puntuaciones usan una calibración distinta de la de v1: no compares números de v1 y v2 ni reutilices umbrales. Se calibraron con speechocean762 (L1 mandarín); la precisión con otras lenguas maternas aún no se ha medido.
 - Un 503 con `v2 model is not available on this server.` significa que la imagen se construyó sin los archivos v2.

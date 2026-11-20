@@ -1,6 +1,6 @@
-<!-- doc-id: docs-architecture | lang: zh | source-rev: f54d8e3a -->
+<!-- doc-id: docs-architecture | lang: zh | source-rev: ec588fa9 -->
 
-> 🌐 **中文翻译**，源文件 [`docs/architecture.md`](../../../docs/architecture.md)（rev `f54d8e3a`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
+> 🌐 **中文翻译**，源文件 [`docs/architecture.md`](../../../docs/architecture.md)（rev `ec588fa9`）。以英文版为准：若两者不一致，请以英文版为准。本译文由机器翻译，尚未经母语者审校。
 
 # 架构
 
@@ -17,7 +17,7 @@ flowchart LR
         mw --> misc["text-analysis、transcribe、<br/>model-info、health"]
     end
     v1 --> w1[("Wav2Vec2 权重<br/>内置于镜像")]
-    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>构建时从私有 HF 仓库获取")]
+    v2 --> w2[("model.int8.onnx, vocab.json, scorer.json<br/>构建时从 HF 仓库获取")]
 ```
 
 所有组件都在一个进程中运行，因为模型很大且只加载一次；额外的 uvicorn worker 会各自加载一份副本。CPU 推理由信号量（`MAX_CONCURRENT_INFERENCES`）限制，阻塞型工作在工作线程中运行，因此事件循环保持空闲。

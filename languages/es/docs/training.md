@@ -1,6 +1,6 @@
-<!-- doc-id: docs-training | lang: es | source-rev: 948a85b2 -->
+<!-- doc-id: docs-training | lang: es | source-rev: 9feeca07 -->
 
-> 🌐 **Traducción al español** de [`docs/training.md`](../../../docs/training.md) (rev `948a85b2`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
+> 🌐 **Traducción al español** de [`docs/training.md`](../../../docs/training.md) (rev `9feeca07`). La versión en inglés es la oficial: si difieren, prevalece el inglés. Traducción automática, sin revisión de un hablante nativo.
 
 # Entrenamiento de los modelos v2
 
@@ -15,7 +15,7 @@ flowchart LR
     ex --> feat
     feat --> sc["train_scorer.py<br/>MLP por fonema + cabezales ridge"]
     sc --> js["scorer.json"]
-    ex --> up["upload_v2_model.py<br/>repo HF privado"]
+    ex --> up["upload_v2_model.py<br/>repo HF"]
     js --> up
 ```
 
@@ -64,8 +64,8 @@ Sin `scorer.json`, el harness igualmente escribe las características por fonema
 
 ## 3. Publicación
 
-`scripts/upload_v2_model.py` sube `model.int8.onnx`, `vocab.json` y `scorer.json` al repo privado de Hugging Face desde el que descargan los builds de la imagen ([deployment.md](deployment.md)). Siempre que cambie el modelo de fonemas o la disposición de las características, reentrena el evaluador: `scorer.json` está atado al orden exacto de características del código que lo produjo (todavía no hay una marca de versión).
+`scripts/upload_v2_model.py` sube `model.int8.onnx`, `vocab.json` y `scorer.json` al repo de Hugging Face del que descargan los builds de la imagen ([deployment.md](deployment.md)). Siempre que cambien el modelo de fonemas o el diseño de características, reentrena el evaluador: `scorer.json` está atado al orden exacto de características del código que lo produjo (todavía no hay sello de versión).
 
 ## Licencias y datos
 
-LibriSpeech y speechocean762 son CC BY 4.0 (créditos en [NOTICE](../../../NOTICE)); el modelo entrenado es un derivado de HuBERT-base (Apache-2.0). L2-ARCTIC **no** se usa: es CC BY-NC. speechocean762 es de L1 mandarín, por lo que un esfuerzo de recopilación y anotación con L1 vietnamita es el principal punto pendiente ([evaluation.md](evaluation.md)).
+LibriSpeech y speechocean762 son CC BY 4.0 (créditos en [NOTICE](../../../NOTICE)); el modelo entrenado es un derivado de HuBERT-base (Apache-2.0). L2-ARCTIC **no** se usa: es CC BY-NC. speechocean762 es de L1 mandarín, así que recopilar y anotar a estudiantes con otras lenguas maternas es la principal tarea pendiente ([evaluation.md](evaluation.md)).
